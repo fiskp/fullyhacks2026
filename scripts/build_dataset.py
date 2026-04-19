@@ -2,15 +2,13 @@
 build_dataset.py — one-time pipeline to build the SEA SWIPES animal dataset.
 
 Flow:
-  1. Crawl three Wikipedia list pages (marine mammals, largest fish, sharks).
-     Wikipedia's list tables contain exact kg values per species and the crawler
-     follows links to individual species pages within max_pages=100.
-  2. Poll each crawl job until status = "completed".
-  3. For each animal, search the crawled indexes first, then fall back to the
-     general HD web search. Walk top-5 results to find the closest weight match.
+  1. Use pre-crawled indexes with actual content (fishbase, marinebio, NOAA,
+     oceana, marinemammalcenter). Wikipedia list-page crawls returned page_count=0.
+  2. For each animal, search the indexes, then fall back to general HD web search.
+     Walk top-5 results to find the closest weight match.
      Animals are marked verified=True if the parsed weight is within
      VERIFY_TOLERANCE (30%) of the hardcoded value.
-  4. Write the full dataset (all 60 animals) to HD FS at
+  3. Write the full dataset (all 60 animals) to HD FS at
      /agent/sea-swipes/animals.json. HD weight is used when verified;
      hardcoded weight is the fallback.
 
@@ -30,12 +28,14 @@ HD_API_KEY = os.environ["HD_API_KEY"]
 BASE_URL = "https://api.humandelta.ai"
 HEADERS = {"Authorization": f"Bearer {HD_API_KEY}", "Content-Type": "application/json"}
 
-SEED_SITES = [
-    # Wikipedia list pages: tables contain exact kg values per species,
-    # and the crawler follows links to individual species pages within max_pages.
-    ("Wikipedia Marine Mammals",  "https://en.wikipedia.org/wiki/List_of_largest_animals"),
-    ("Wikipedia Largest Fish",    "https://en.wikipedia.org/wiki/List_of_largest_fish"),
-    ("Wikipedia Cartilaginous",   "https://en.wikipedia.org/wiki/List_of_largest_sharks"),
+# Pre-crawled indexes with actual content (page_count > 0).
+# Wikipedia list-page crawls all returned page_count=0, so we use these instead.
+EXISTING_INDEX_IDS = [
+    "9c09b49e-4ea0-4e37-8b7b-3c957aa61303",  # fishbase.se           (100 pages)
+    "6a723596-ef21-41e0-bb63-5a0123fbc5d4",  # marinebio.org/species (100 pages)
+    "cc838144-a835-40b7-8abb-b9aa0ffb1c40",  # marinemammalcenter.org (100 pages)
+    "0b15726f-49fe-4eb4-9bf7-49136631ccc1",  # fisheries.noaa.gov    (99 pages)
+    "f48e2e0a-976a-49d7-b471-de4749cb9fcf",  # oceana.org/marine-life (86 pages)
 ]
 
 # (name, emoji, weight_kg, fun_fact)
@@ -256,18 +256,9 @@ def write_to_hd_fs(dataset: list[dict]) -> None:
 # ---------------------------------------------------------------------------
 
 def main():
-    # Step 1 — kick off crawls
-    print("Starting crawl index jobs...")
-    index_ids = []
-    for name, url in SEED_SITES:
-        index_id = start_crawl(name, url)
-        print(f"  Queued: '{name}' -> {index_id}")
-        index_ids.append(index_id)
-
-    print("Polling until all crawls complete...")
-    for index_id in index_ids:
-        poll_until_complete(index_id)
-        print(f"  Completed: {index_id}")
+    # Step 1 — use pre-crawled indexes (Wikipedia crawls returned page_count=0)
+    index_ids = EXISTING_INDEX_IDS
+    print(f"Using {len(index_ids)} existing indexes with content.")
 
     # Step 2 — verify weights via HD search; prefer real data over hardcoded
     print(f"\nVerifying weights for {len(ANIMALS)} animals via HD search...")
