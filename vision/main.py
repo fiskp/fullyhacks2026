@@ -32,11 +32,15 @@ def run_ws_server():
 threading.Thread(target=run_ws_server, daemon=True).start()
 
 def broadcast(message: str):
-    for ws in list(connected_clients):
-        try:
-            asyncio.run(ws.send(message))
-        except:
-            pass
+    loop = asyncio.new_event_loop()
+    async def _send():
+        for ws in list(connected_clients):
+            try:
+                await ws.send(message)
+            except:
+                pass
+    loop.run_until_complete(_send())
+    loop.close()
 
 def main():
     cam          = CameraManager(0)
@@ -62,6 +66,8 @@ def main():
 
         # ── Pose detection (up to 2 players) ──────────────────────────
         poses = pose_tracker.process(frame)
+        if poses is None:
+            poses = []
 
         # ── Distance estimation per player ─────────────────────────────
         distances = []
