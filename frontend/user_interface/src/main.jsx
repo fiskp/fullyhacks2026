@@ -3,11 +3,13 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import './index.css'
 import App from './App.jsx'
 import Results from './pages/Results/Results.jsx'
+import Home from './pages/Home/Home.jsx'
 
 createRoot(document.getElementById('root')).render(
   <BrowserRouter>
     <Routes>
-      <Route path="/" element={<App />} />
+      <Route path="/" element={<Home />} />
+      <Route path="/game" element={<App />} />
       <Route path="/results" element={<Results />} />
     </Routes>
   </BrowserRouter>
