@@ -1,0 +1,45 @@
+.game-cards {
+    display: flex;
+    flex: 1;
+    width: 100%;
+    position: relative;
+}
+
+.card {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+}
+
+.left-card {
+  flex: 1;
+  background: var(--ocean-mid);
+}
+
+.right-card {
+  flex: 1;
+  background: var(--ocean-light);
+}
+
+.animal-name {
+  color: var(--white);
+  font-size: 24px;
+  font-weight: 700;
+  text-align: center;
+  padding: 0 40px;
+}
+
+.stat-pill {
+  padding: 10px 28px;
+  border-radius: 20px;
+  font-size: 16px;
+  font-family: 'Exo 2', sans-serif;
+  font-weight: 600;
+  letter-spacing: 3px;
+  background: var(--white-faint);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: var(--white-muted);
+}

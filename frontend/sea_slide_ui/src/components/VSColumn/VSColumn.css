@@ -1,0 +1,88 @@
+.vs-column {
+  position: absolute;
+  left: 50%;
+  top: 0;
+  bottom: 0;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-around;
+  padding: 20px 0 80px 0;  /* more padding at bottom pushes VS up */
+  z-index: 10;
+}
+
+.icons-row {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.player-icon {
+  transition: transform 0.4s ease;
+}
+
+.moved-left {
+  transform: translateX(-300px);
+}
+
+.moved-right {
+  transform: translateX(300px);
+}
+
+.vs-group {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+}
+
+.vs-circle {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  background: var(--red);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--white);
+  font-size: 20px;
+  font-weight: 800;
+  font-family: 'Exo 2', sans-serif;
+  box-shadow:
+    0 0 0 6px var(--red-faint),
+    0 0 30px rgba(233, 69, 96, 0.5);
+}
+
+.prompt-box {
+  background: rgba(0, 0, 0, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 8px;
+  padding: 10px 20px;
+  color: var(--white);
+  font-size: 14px;
+  font-family: 'Exo 2', sans-serif;
+  font-weight: bold;
+  white-space: normal;
+  text-align: center;
+  max-width: 200px;
+  margin-top: 40px;
+}
+
+.camera-feed {
+  width: 240px;
+  height: 200px;
+  border: 1px dashed rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.camera-label {
+  color: var(--white-muted);
+  font-size: 11px;
+  font-family: 'Exo 2', sans-serif;
+  letter-spacing: 2px;
+}

@@ -1,0 +1,19 @@
+.timer-bar {
+    background: var(--ocean-dark);
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    padding: 0 40px;
+    flex-shrink: 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.timer-number {
+    font-family: 'Exo 2', sans-serif;
+    font-size: 30px;
+    font-weight: 700;
+    min-width: 24px;
+    text-align: center;
+}
