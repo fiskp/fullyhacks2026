@@ -15,7 +15,7 @@ export async function initQueue() {
   const resp = await fetch(`${HD_BASE}/v1/fs`, {
     method: "POST",
     headers: {
-      Authorization: `Bearer ${window.HD_API_KEY}`,
+      Authorization: `Bearer ${import.meta.env.VITE_HD_API_KEY}`,
       "Content-Type": "application/json",
     },
     body: JSON.stringify({ op: "read", path: HD_FS_PATH }),
