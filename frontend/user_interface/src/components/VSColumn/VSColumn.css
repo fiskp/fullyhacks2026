@@ -71,13 +71,11 @@
 }
 
 .camera-feed {
-  width: 240px;
-  height: 200px;
-  border: 1px dashed rgba(255, 255, 255, 0.2);
+  width: 200px;
+  height: 150px;
   border-radius: 8px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  object-fit: cover;
+  border: 1px solid rgba(0, 180, 216, 0.3);
 }
 
 .camera-label {
