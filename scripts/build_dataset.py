@@ -7,9 +7,9 @@ Flow:
   3. Vector-search each animal's weight via POST /v1/search.
   4. Filter results with score < 0.85, parse weight from text.
   5. Write the curated dataset to the HD virtual filesystem at
-     /agent/depth-charge/animals.json via POST /v1/fs { op: "write" }.
+     /agent/sea-slides/animals.json via POST /v1/fs { op: "write" }.
 
-The game (game.js) reads /agent/depth-charge/animals.json at startup
+The game (game.js) reads /agent/sea-slides/animals.json at startup
 via the same FS API — no local JSON file needed.
 
 Requires:  pip install requests
@@ -97,7 +97,7 @@ ANIMALS = [
 
 SCORE_THRESHOLD = 0.85
 POLL_INTERVAL = 5   # seconds; docs recommend 3-5 s
-HD_FS_PATH = "/agent/depth-charge/animals.json"
+HD_FS_PATH = "/agent/sea-slides/animals.json"
 
 
 # ---------------------------------------------------------------------------
@@ -206,7 +206,7 @@ def main():
     index_ids = []
     for name, url in SEED_SITES:
         index_id = start_crawl(name, url)
-        print(f"  Queued: '{name}' → {index_id}")
+        print(f"  Queued: '{name}' -> {index_id}")
         index_ids.append(index_id)
 
     print("Polling until all crawls complete...")
