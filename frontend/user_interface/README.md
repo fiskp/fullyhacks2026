@@ -1,18 +1,56 @@
-# React + Vite
+# Sea Swipe — Frontend 🌊
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+React frontend for Sea Swipe, a two-player gesture-controlled trivia game.
 
-Currently, two official plugins are available:
+## Tech Stack
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+- React + Vite
+- React Router
+- WebSocket (receives CV gestures from Python)
+- Human Delta API (animal knowledge layer)
 
-## React Compiler
+## Running
 
-The React Compiler is enabled on this template. See [this documentation](https://react.dev/learn/react-compiler) for more information.
+```bash
+npm install
+npm run dev
+```
 
-Note: This will impact Vite dev & build performances.
+Open `http://localhost:5173`
 
-## Expanding the ESLint configuration
+## Pages
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+- `/` — Homepage, enter a category to start
+- `/game` — Main game screen
+- `/results` — Winner and final scores
+
+## Controls (keyboard fallback)
+
+| Key | Player | Action |
+|---|---|---|
+| Arrow Left | P1 | Left |
+| Arrow Right | P1 | Right |
+| Arrow Up | P2 | Left |
+| Arrow Down | P2 | Right |
+
+## Scoring
+
+- Both correct → 1 point each
+- One correct → 2 points
+- First to 10 wins
+
+## Structure
+
+```
+src/
+  components/
+    Navbar/
+    Timer/
+    GameCards/
+    VSColumn/
+  pages/
+    Home/
+    Results/
+  mock_data/
+  utils/
+```
