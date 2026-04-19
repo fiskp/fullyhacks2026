@@ -126,6 +126,27 @@ function App() {
           setTimeout(() => {
             const next = roundRef.current + 1;
 
+                        /* First to 10 points wins */
+            if (p1ScoreRef.current >= 10 || p2ScoreRef.current >= 10) {
+              navigate("/results", {
+                state: {
+                  p1Score: p1ScoreRef.current,
+                  p2Score: p2ScoreRef.current,
+                }
+              });
+              return;
+            }
+
+            if (next >= TOTAL_ROUNDS) {
+              navigate("/results", {
+                state: {
+                  p1Score: p1ScoreRef.current,
+                  p2Score: p2ScoreRef.current,
+                }
+              });
+              return;
+            }
+
             if (next >= TOTAL_ROUNDS) {
               navigate("/results", {
                 state: {
