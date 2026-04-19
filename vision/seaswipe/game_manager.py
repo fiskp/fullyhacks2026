@@ -14,29 +14,27 @@ import pyautogui
 from seaswipe.swipe_detector import SwipeManager
 
 # ── Distance thresholds ────────────────────────────────────────────────────
-DIST_TOO_CLOSE_FT = 5.0   # ft — warn player to move back
-DIST_TOO_FAR_FT   = 7.0   # ft — warn player to move closer
+DIST_TOO_CLOSE_FT = 5.0
+DIST_TOO_FAR_FT   = 7.0
 
 # ── Key mappings ───────────────────────────────────────────────────────────
-#   Player 1: left swipe → LEFT arrow,  right swipe → RIGHT arrow
-#   Player 2: left swipe → DOWN arrow,  right swipe → UP arrow
 PLAYER_KEYS = {
     1: {"left": "left",  "right": "right"},
     2: {"left": "down",  "right": "up"},
 }
 
-# ── Thumbs-up: how many consecutive frames both players must hold it ───────
+# ── Thumbs-up hold frames ──────────────────────────────────────────────────
 THUMBS_HOLD_FRAMES = 20
 
 # ── Flash display duration ─────────────────────────────────────────────────
 FLASH_FRAMES = 35
 
 # ── Colors ─────────────────────────────────────────────────────────────────
-COLOR_P1      = (0,  200, 100)   # green-ish
-COLOR_P2      = (0,  140, 255)   # blue-ish
-COLOR_WARN    = (0,  50,  255)   # red
-COLOR_READY   = (0,  230, 230)   # cyan
-COLOR_WHITE   = (255, 255, 255)
+COLOR_P1    = (0,  200, 100)
+COLOR_P2    = (0,  140, 255)
+COLOR_WARN  = (0,  50,  255)
+COLOR_READY = (0,  230, 230)
+COLOR_WHITE = (255, 255, 255)
 
 
 class PlayerState:
@@ -45,7 +43,7 @@ class PlayerState:
         self.label        = f"Player {number}"
         self.color        = COLOR_P1 if number == 1 else COLOR_P2
         self.swipe_mgr    = SwipeManager(f"P{number}")
-        self.flash_pool   = {}    # { direction: frames_remaining }
+        self.flash_pool   = {}
         self.thumbs_ready = False
 
     def tick_flash(self):
@@ -56,19 +54,16 @@ class PlayerState:
 
 
 class GameManager:
-    def __init__(self):
+    def __init__(self, broadcast_fn=None):
         self.players          = [PlayerState(1), PlayerState(2)]
-        self._thumbs_counter  = 0   # counts consecutive frames both players thumbs-up
+        self._thumbs_counter  = 0
+        # broadcast_fn sends messages to the React frontend via WebSocket
+        # defaults to a no-op lambda if not provided
+        self._broadcast       = broadcast_fn or (lambda msg: None)
 
-    # ──────────────────────────────────────────────────────────────────────
     def update(self, poses: list, distances: list, thumbs_up_count: int,
                w: int, h: int):
-        """
-        poses          : list of landmark dicts from PoseTracker (sorted L→R)
-        distances      : list of distance floats in ft, parallel to poses
-        thumbs_up_count: total thumbs-up hands detected this frame
-        w, h           : frame dimensions
-        """
+
         # ── Swipe detection per player ─────────────────────────────────
         for i, player in enumerate(self.players):
             lm = poses[i] if i < len(poses) else None
@@ -81,12 +76,18 @@ class GameManager:
             events = player.swipe_mgr.update(lm, w, h)
             for direction in events:
                 player.add_flash(direction)
-                key = PLAYER_KEYS[player.number][direction]
-                pyautogui.press(key)
-                print(f"[Sea Swipe] {player.label} swiped {direction.upper()} → key '{key}'")
+                key    = PLAYER_KEYS[player.number][direction]
+                ws_msg = f"p{player.number}_{direction}"
 
-        # ── Thumbs-up ready check (need all 4 hands thumbs-up) ────────
-        # 2 players × 2 hands = 4 total thumbs-up required
+                # fire keyboard event for local fallback
+                pyautogui.press(key)
+
+                # broadcast to React frontend via WebSocket
+                self._broadcast(ws_msg)
+
+                print(f"[Sea Swipe] {player.label} swiped {direction.upper()} → key '{key}' → ws '{ws_msg}'")
+
+        # ── Thumbs-up ready check ──────────────────────────────────────
         if thumbs_up_count >= 4:
             self._thumbs_counter += 1
         else:
@@ -94,23 +95,21 @@ class GameManager:
 
         if self._thumbs_counter >= THUMBS_HOLD_FRAMES:
             pyautogui.press("enter")
-            print("[SlideKick] Both players ready → ENTER")
-            self._thumbs_counter = 0   # reset so it doesn't spam
+            self._broadcast("start")
+            print("[SlideKick] Both players ready → ENTER → ws 'start'")
+            self._thumbs_counter = 0
 
-    # ──────────────────────────────────────────────────────────────────────
     def draw(self, frame, poses: list, distances: list, thumbs_up_count: int):
         h, w = frame.shape[:2]
 
         for i, player in enumerate(self.players):
             lm = poses[i] if i < len(poses) else None
 
-            # ── Player label above their body ──────────────────────────
             if lm is not None:
                 sx = int((lm["left_shoulder"][0] + lm["right_shoulder"][0]) / 2 * w)
                 sy = int((lm["left_shoulder"][1] + lm["right_shoulder"][1]) / 2 * h) - 30
                 self._put_label(frame, player.label, (sx, sy), player.color, scale=0.8, thickness=2)
 
-                # ── Distance warning over their body ───────────────────
                 dist = distances[i] if i < len(distances) else None
                 if dist is not None:
                     if dist < DIST_TOO_CLOSE_FT:
@@ -120,10 +119,8 @@ class GameManager:
                         warn = f"{player.label}: Move Closer!"
                         self._put_label(frame, warn, (sx, sy + 40), COLOR_WARN, scale=0.75, thickness=2)
 
-            # ── Swipe flash in corners ──────────────────────────────────
-            # P1 → bottom-left,  P2 → bottom-right
             for direction, frames_left in player.flash_pool.items():
-                alpha = min(1.0, frames_left / 10)   # fade last 10 frames
+                alpha = min(1.0, frames_left / 10)
                 if direction == "left":
                     text = f"<< {player.label} LEFT"
                 else:
@@ -138,7 +135,6 @@ class GameManager:
                 cv2.putText(frame, text, (x, y),
                             cv2.FONT_HERSHEY_DUPLEX, 0.9, player.color, 2, cv2.LINE_AA)
 
-        # ── Thumbs-up ready indicator ───────────────────────────────────
         if thumbs_up_count >= 4:
             filled = min(1.0, self._thumbs_counter / THUMBS_HOLD_FRAMES)
             bar_w  = int(200 * filled)
@@ -150,7 +146,6 @@ class GameManager:
             self._put_label(frame, "Waiting for both players...", (w // 2 - 150, 35),
                             COLOR_WHITE, scale=0.6)
 
-    # ──────────────────────────────────────────────────────────────────────
     @staticmethod
     def _put_label(frame, text, pos, color, scale=0.6, thickness=1):
         (tw, th), _ = cv2.getTextSize(text, cv2.FONT_HERSHEY_SIMPLEX, scale, thickness)

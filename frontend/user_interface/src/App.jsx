@@ -63,6 +63,24 @@ function App() {
     return () => window.removeEventListener("keydown", handleKeys);
   }, [gameStarted, revealed]);
 
+  /* WebSocket — receives CV swipe events from Python */
+  useEffect(() => {
+    const ws = new WebSocket("ws://localhost:8765");
+    
+    ws.onmessage = (event) => {
+      const data = event.data;
+      if (data === "p1_right") window.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight' }));
+      if (data === "p1_left")  window.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft' }));
+      if (data === "p2_right") window.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown' }));
+      if (data === "p2_left")  window.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowUp' }));
+      if (data === "start")    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter' }));
+    };
+
+  ws.onerror = (err) => console.log("WebSocket error:", err);
+
+  return () => ws.close();
+}, []);
+
   /* Timer — reveals on 0, auto advances, navigates to results */
   useEffect(() => {
     if (!gameStarted || revealed) return;

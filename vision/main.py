@@ -1,4 +1,8 @@
 import cv2
+import asyncio
+import websockets
+import threading
+import json
 from seaswipe.camera_manager import CameraManager
 from seaswipe.pose_tracker import PoseTracker, HandTracker, draw_hands, draw_arm_lines
 from seaswipe.calibration import CalibrationState
@@ -8,11 +12,37 @@ from seaswipe.overlay import draw_overlay, draw_skeleton
 from seaswipe.camera_registry import load_camera_profile, get_camera_id
 from seaswipe.game_manager import GameManager
 
+# ── WebSocket server ──
+connected_clients = set()
+
+async def ws_handler(websocket):
+    connected_clients.add(websocket)
+    try:
+        await websocket.wait_closed()
+    finally:
+        connected_clients.discard(websocket)
+
+async def start_ws_server():
+    async with websockets.serve(ws_handler, "localhost", 8765):
+        await asyncio.Future()
+
+def run_ws_server():
+    asyncio.run(start_ws_server())
+
+threading.Thread(target=run_ws_server, daemon=True).start()
+
+def broadcast(message: str):
+    for ws in list(connected_clients):
+        try:
+            asyncio.run(ws.send(message))
+        except:
+            pass
+
 def main():
     cam          = CameraManager(0)
     pose_tracker = PoseTracker()
     hand_tracker = HandTracker()
-    game         = GameManager()
+    game         = GameManager(broadcast_fn=broadcast)
     calib        = CalibrationState()
     cam_id       = get_camera_id(cam.cap)
     calibrated   = False

@@ -1,6 +1,20 @@
+import { useEffect, useRef } from "react";
 import "./VSColumn.css";
 
 function VSColumn({ p1Position, p2Position, prompt, revealed }) {
+
+  const videoRef = useRef(null);
+
+  /* Start webcam feed */
+  useEffect(() => {
+    navigator.mediaDevices.getUserMedia({ video: true })
+      .then(stream => {
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+        }
+      })
+      .catch(err => console.log("Camera error:", err));
+  }, []);
 
   function getIconClass(position) {
     if (position === "left")  return "player-icon moved-left";
@@ -41,9 +55,13 @@ function VSColumn({ p1Position, p2Position, prompt, revealed }) {
         {/* Prompt updates each round */}
         <div className="prompt-box">{prompt}</div>
 
-        <div className="camera-feed">
-          <p className="camera-label">camera feed</p>
-        </div>
+        {/* Live webcam feed */}
+        <video
+          ref={videoRef}
+          autoPlay
+          muted
+          className="camera-feed"
+        />
 
       </div>
 
