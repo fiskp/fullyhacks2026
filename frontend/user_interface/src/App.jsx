@@ -3,7 +3,7 @@ import "./App.css";
 import Navbar from "./components/Navbar/Navbar";
 import Timer from "./components/Timer/Timer";
 import GameCards from "./components/GameCards/GameCards";
-import { initQueue, getNextRound, setScores } from "./gameLogic";
+import { initQueue, getNextRound, setScores, advanceWinner } from "./gameLogic";
 import { useNavigate } from "react-router-dom";
 
 const TOTAL_ROUNDS = 6;
@@ -136,6 +136,7 @@ function App() {
               return;
             }
 
+            advanceWinner(correctSide);
             setRoundData(getNextRound());
             setCurrentRound(next);
             setP1Position(null);
