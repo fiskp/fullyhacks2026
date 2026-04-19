@@ -6,7 +6,7 @@ import sharkSvg  from "../../assets/shark.svg";
 import jellyfish from "../../assets/jellyfish.svg";
 import octopus   from "../../assets/octopus.svg";
 import seaTurtle from "../../assets/sea-turtle.svg";
-import goldfish  from "../../assets/goldfish.svg";
+import whale      from "../../assets/whale.svg";
 
 function Home() {
   const [category, setCategory] = useState("");
@@ -29,7 +29,7 @@ function Home() {
       <img src={jellyfish} className="sea-animal animal-jelly"   alt="" />
       <img src={octopus}   className="sea-animal animal-octopus" alt="" />
       <img src={seaTurtle} className="sea-animal animal-turtle"  alt="" />
-      <img src={goldfish}  className="sea-animal animal-fish"    alt="" />
+      <img src={whale}      className="sea-animal animal-whale"      alt="" />
 
       {/* Content */}
       <div className="home-content">
