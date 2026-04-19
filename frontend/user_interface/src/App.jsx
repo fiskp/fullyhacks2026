@@ -6,8 +6,6 @@ import GameCards from "./components/GameCards/GameCards";
 import { initQueue, getNextRound, setScores, advanceWinner } from "./gameLogic";
 import { useNavigate } from "react-router-dom";
 
-const TOTAL_ROUNDS = 6;
-
 function App() {
 
   const [gameStarted, setGameStarted]   = useState(false);
@@ -52,16 +50,12 @@ function App() {
       .catch(err => console.error("Failed to load animals:", err));
   }, []);
 
-  /* Start game on Enter — only once the animal queue is ready */
+  /* Auto start when animal queue is ready */
   useEffect(() => {
-    function handleStart(e) {
-      if (e.key === "Enter" && !gameStarted && queueReady) {
-        setGameStarted(true);
-      }
+    if (queueReady) {
+      setGameStarted(true);
     }
-    window.addEventListener("keydown", handleStart);
-    return () => window.removeEventListener("keydown", handleStart);
-  }, [gameStarted, queueReady]);
+  }, [queueReady]);
 
   /* Arrow keys — only before reveal */
   useEffect(() => {
@@ -126,28 +120,8 @@ function App() {
           setTimeout(() => {
             const next = roundRef.current + 1;
 
-                        /* First to 10 points wins */
+            /* First to 10 points wins */
             if (p1ScoreRef.current >= 10 || p2ScoreRef.current >= 10) {
-              navigate("/results", {
-                state: {
-                  p1Score: p1ScoreRef.current,
-                  p2Score: p2ScoreRef.current,
-                }
-              });
-              return;
-            }
-
-            if (next >= TOTAL_ROUNDS) {
-              navigate("/results", {
-                state: {
-                  p1Score: p1ScoreRef.current,
-                  p2Score: p2ScoreRef.current,
-                }
-              });
-              return;
-            }
-
-            if (next >= TOTAL_ROUNDS) {
               navigate("/results", {
                 state: {
                   p1Score: p1ScoreRef.current,
@@ -183,19 +157,10 @@ function App() {
   return (
     <div className="game">
 
-      {!gameStarted && (
-        <div className="start-overlay">
-          <p className="start-sub">
-            {queueReady ? "Press Enter to Start" : "Loading animals..."}
-          </p>
-        </div>
-      )}
-
       <Navbar p1Score={p1Score} p2Score={p2Score} />
       <Timer
         gameStarted={gameStarted}
         timeLeft={timeLeft}
-        currentRound={currentRound}
       />
       {roundData && (
         <GameCards
