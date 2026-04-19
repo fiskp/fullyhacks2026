@@ -16,7 +16,7 @@ function App() {
   const [p1Position, setP1Position]     = useState(null);
   const [p2Position, setP2Position]     = useState(null);
   const [currentRound, setCurrentRound] = useState(0);
-  const [timeLeft, setTimeLeft]         = useState(15);
+  const [timeLeft, setTimeLeft]         = useState(10);
   const [revealed, setRevealed]         = useState(false);
   const [roundData, setRoundData]       = useState(null);
   const [queueReady, setQueueReady]     = useState(false);
@@ -126,6 +126,27 @@ function App() {
           setTimeout(() => {
             const next = roundRef.current + 1;
 
+                        /* First to 10 points wins */
+            if (p1ScoreRef.current >= 10 || p2ScoreRef.current >= 10) {
+              navigate("/results", {
+                state: {
+                  p1Score: p1ScoreRef.current,
+                  p2Score: p2ScoreRef.current,
+                }
+              });
+              return;
+            }
+
+            if (next >= TOTAL_ROUNDS) {
+              navigate("/results", {
+                state: {
+                  p1Score: p1ScoreRef.current,
+                  p2Score: p2ScoreRef.current,
+                }
+              });
+              return;
+            }
+
             if (next >= TOTAL_ROUNDS) {
               navigate("/results", {
                 state: {
@@ -142,7 +163,7 @@ function App() {
             setP1Position(null);
             setP2Position(null);
             setRevealed(false);
-            setTimeLeft(15);
+            setTimeLeft(10);
           }, 2000);
 
           return 0;
