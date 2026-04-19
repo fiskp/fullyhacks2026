@@ -34,7 +34,7 @@ function Home() {
       {/* Content */}
       <div className="home-content">
 
-        <h1 className="home-title">SEA SLIDES</h1>
+        <h1 className="home-title">SEA SWIPE</h1>
         <p className="home-sub">What do you want to explore today?</p>
 
         {/* Input with gradient border */}

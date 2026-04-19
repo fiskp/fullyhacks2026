@@ -1,5 +1,5 @@
 """
-build_dataset.py — one-time pipeline to build the SEA SWIPES animal dataset.
+build_dataset.py — one-time pipeline to build the SEA SWIPE animal dataset.
 
 Flow:
   1. Use pre-crawled indexes with actual content (fishbase, marinebio, NOAA,

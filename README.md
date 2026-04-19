@@ -1,4 +1,4 @@
-# SEA SWIPES
+# SEA SWIPE
 
 A 2-player local party game where players compete to guess which marine animal weighs more. Runs entirely on one machine with a shared screen.
 

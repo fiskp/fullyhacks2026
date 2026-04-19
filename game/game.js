@@ -1,4 +1,4 @@
-// SEA SWIPES — game logic: round management, scoring, input handling, win conditions
+// SEA SWIPE — game logic: round management, scoring, input handling, win conditions
 
 const HD_BASE   = "https://api.humandelta.ai";
 const HD_FS_PATH = "/agent/sea-swipes/animals.json";
