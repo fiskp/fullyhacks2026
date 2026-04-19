@@ -6,8 +6,8 @@ React frontend for Sea Swipe, a two-player gesture-controlled trivia game.
 
 - React + Vite
 - React Router
-- WebSocket (receives CV gestures from Python)
-- Human Delta API (animal knowledge layer)
+- WebSocket
+- Human Delta API
 
 ## Running
 
