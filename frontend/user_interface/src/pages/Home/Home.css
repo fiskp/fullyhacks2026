@@ -103,3 +103,46 @@
   cursor: not-allowed;
   opacity: 1;
 }
+
+/* -- SVG animals -- */
+.sea-animal {
+  position: absolute;
+  pointer-events: none;
+  opacity: 0.15;
+  filter: brightness(0) invert(1) sepia(1) saturate(1.5) hue-rotate(170deg);
+}
+
+.animal-shark {
+  width: 200px;
+  top: 8%;
+  right: 6%;
+  animation: drift 8s ease-in-out infinite;
+}
+
+.animal-jelly {
+  width: 120px;
+  top: 10%;
+  left: 4%;
+  animation: drift 10s ease-in-out infinite 1s;
+}
+
+.animal-octopus {
+  width: 150px;
+  bottom: 8%;
+  left: 4%;
+  animation: drift 9s ease-in-out infinite 2s;
+}
+
+.animal-turtle {
+  width: 140px;
+  bottom: 12%;
+  right: 6%;
+  animation: drift 11s ease-in-out infinite 0.5s;
+}
+
+.animal-fish {
+  width: 100px;
+  top: 42%;
+  left: 10%;
+  animation: drift 7s ease-in-out infinite 3s;
+}

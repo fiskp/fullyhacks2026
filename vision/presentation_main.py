@@ -1,4 +1,4 @@
-import cv2
+climport cv2
 from seaswipe.camera_manager import CameraManager
 from seaswipe.pose_tracker import PoseTracker, HandTracker, draw_hands, draw_arm_lines
 from seaswipe.overlay import draw_skeleton
