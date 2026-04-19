@@ -24,6 +24,12 @@
     border: 1px solid;
 }
 
+.player-score {
+  color: #ffffff;
+  font-size: 20px;
+  font-weight: 700;
+}
+
 .p1 {
   background: var(--cyan-faint);
   border-color: var(--cyan-border);

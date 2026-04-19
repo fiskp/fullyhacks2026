@@ -56,10 +56,11 @@
 }
 
 .prompt-box {
-  background: rgba(0, 0, 0, 0.85);
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(6, 16, 32, 0.75);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(0, 180, 216, 0.2);
   border-radius: 8px;
-  padding: 10px 20px;
+  padding: 10px 24px;
   color: var(--white);
   font-size: 14px;
   font-family: 'Exo 2', sans-serif;
@@ -67,7 +68,6 @@
   white-space: normal;
   text-align: center;
   max-width: 200px;
-  margin-top: 40px;
 }
 
 .camera-feed {
