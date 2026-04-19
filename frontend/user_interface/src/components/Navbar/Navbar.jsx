@@ -18,7 +18,7 @@ function Navbar({ p1Score, p2Score }) {
       </div>
 
       {/* Game Logo */ }
-      <h1 className="logo">SEA SLIDE GAME</h1>
+      <h1 className="logo">SEA SWIPE GAME</h1>
 
       {/* p2 badge */}
       <div className="player-badge p2">
