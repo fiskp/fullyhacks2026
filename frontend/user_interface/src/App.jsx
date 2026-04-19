@@ -3,7 +3,7 @@ import "./App.css";
 import Navbar from "./components/Navbar/Navbar";
 import Timer from "./components/Timer/Timer";
 import GameCards from "./components/GameCards/GameCards";
-import { initQueue, getNextRound } from "./gameLogic";
+import { initQueue, getNextRound, setScores } from "./gameLogic";
 import { useNavigate } from "react-router-dom";
 
 const TOTAL_ROUNDS = 10;
@@ -113,9 +113,11 @@ function App() {
           if (p1Correct && p2Correct) {
             setP1Score(s => s + 1);
             setP2Score(s => s + 1);
+            setScores(p1ScoreRef.current + 1, p2ScoreRef.current + 1);
           } else {
-            if (p1Correct) setP1Score(s => s + 2);
-            if (p2Correct) setP2Score(s => s + 2);
+            if (p1Correct)  { setP1Score(s => s + 2); setScores(p1ScoreRef.current + 2, p2ScoreRef.current); }
+            if (p2Correct)  { setP2Score(s => s + 2); setScores(p1ScoreRef.current, p2ScoreRef.current + 2); }
+            if (!p1Correct && !p2Correct) setScores(p1ScoreRef.current, p2ScoreRef.current);
           }
 
           setRevealed(true);

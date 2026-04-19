@@ -1,38 +1,28 @@
 const GEMINI_BASE  = "https://generativelanguage.googleapis.com/v1beta";
 const GEMINI_MODEL = "gemini-2.0-flash";
 
-const _ctx = {
-  winner:  null,   // current winning animal { name, weight_kg }
-  recent:  [],     // last 5 challengers
-  scores:  [0, 0], // [p1, p2]
-};
-
-export function updateContext({ winner, challenger, scores }) {
-  if (winner  !== undefined) _ctx.winner = winner;
-  if (scores  !== undefined) _ctx.scores = scores;
-  if (challenger) {
-    _ctx.recent.push(challenger);
-    if (_ctx.recent.length > 5) _ctx.recent.shift();
-  }
-}
-
-// Returns the name of the chosen animal, or null on any failure.
-export async function geminiPickChallenger(pool) {
+// pool: array of round objects { left, right, prompt, correct }
+// scores: [p1, p2]
+// Returns an index into pool[], or null on any failure.
+export async function geminiPickRound(pool, scores) {
   const key = import.meta.env.VITE_GEMINI_API_KEY;
-  if (!key) return null;
+  if (!key || pool.length === 0) return null;
 
-  const available = pool.map(a => `${a.name} (${a.weight_kg} kg)`);
-  const gap = _ctx.scores[0] - _ctx.scores[1];
+  const [s1, s2] = scores;
+  const gap = s1 - s2;
   const difficultyHint = Math.abs(gap) > 3
-    ? "The game is unbalanced — pick an animal with weight very close to the current winner to make guessing harder."
-    : "Scores are close — pick a dramatic weight contrast to keep the energy high.";
+    ? "One player is dominating — pick a round where the two stats are close together, making it harder to guess correctly."
+    : "Scores are tight — pick a round with a dramatic difference in stats to create excitement.";
+
+  const options = pool
+    .map((r, i) => `${i}: ${r.left.name} (${r.left.stat}) vs ${r.right.name} (${r.right.stat}) — ${r.prompt}`)
+    .join("\n");
 
   const prompt = [
-    `Current winner: ${_ctx.winner ? `${_ctx.winner.name} (${_ctx.winner.weight_kg} kg)` : "none"}.`,
-    `Recent challengers: ${_ctx.recent.slice(-3).map(a => a.name).join(", ") || "none"}.`,
+    `Player scores — P1: ${s1}, P2: ${s2}.`,
     difficultyHint,
-    `Available animals: ${available.join(", ")}.`,
-    "Reply with only the animal name, exactly as written above. No punctuation, no explanation.",
+    `Available rounds:\n${options}`,
+    "Reply with only the number of the round you choose. No explanation.",
   ].join("\n");
 
   try {
@@ -46,7 +36,9 @@ export async function geminiPickChallenger(pool) {
     );
     if (!resp.ok) return null;
     const data = await resp.json();
-    return data.candidates?.[0]?.content?.parts?.[0]?.text?.trim() ?? null;
+    const text = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
+    const idx = parseInt(text, 10);
+    return Number.isFinite(idx) && idx >= 0 && idx < pool.length ? idx : null;
   } catch {
     return null;
   }
