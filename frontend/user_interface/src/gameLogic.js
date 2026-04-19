@@ -1,7 +1,7 @@
 import { rounds as fallbackRounds } from "./mock_data/rounds";
 import { geminiPickRound } from "./geminiSelector";
 
-const HD_BASE    = "https://api.humandelta.ai";
+const HD_BASE    = "/hd";
 const HD_FS_PATH = "/agent/sea-swipes/animals.json";
 const QUEUE_MIN  = 2;
 

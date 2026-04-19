@@ -8,4 +8,13 @@ export default defineConfig({
     react(),
     babel({ presets: [reactCompilerPreset()] })
   ],
+  server: {
+    proxy: {
+      "/hd": {
+        target: "https://api.humandelta.ai",
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/hd/, ""),
+      },
+    },
+  },
 })
