@@ -25,52 +25,110 @@ async function fetchAnimals() {
 // Game state
 // ---------------------------------------------------------------------------
 
+const ROUND_MS  = 15_000;
+const WIN_SCORE = 500;
+
 const state = {
-  animals: [],       // full dataset from HD FS
-  used: new Set(),   // indices already shown this game
-  scores: [0, 0],   // [player1, player2]
-  round: null,       // { left: animal, right: animal, answer: "left"|"right"|"tie" }
-  phase: "loading",  // loading | ready | reveal | gameover
+  animals: [],          // full dataset from HD FS
+  used: new Set(),      // indices already shown this game
+  scores: [0, 0],       // [player1, player2]
+  round: null,          // { left: animal, right: animal, answer: "left"|"right"|"tie" }
+  guesses: [null, null],// current live guess per player; swappable until timer fires
+  timerStart: null,     // Date.now() when the round began
+  timerHandle: null,    // setTimeout handle for auto-resolve
+  phase: "loading",     // loading | ready | reveal | gameover
 };
 
-const WIN_SCORE = 10;
+// ---------------------------------------------------------------------------
+// Scoring
+// ---------------------------------------------------------------------------
+
+// 100 pts per round — shared 50/50 if both right, winner-take-all if only one right, 0 if neither.
+function resolveRound() {
+  clearTimeout(state.timerHandle);
+  state.timerHandle = null;
+
+  const { answer } = state.round;
+  const [g0, g1] = state.guesses;
+  const p0correct = g0 === answer;
+  const p1correct = g1 === answer;
+
+  let awarded = [0, 0];
+  if (p0correct && p1correct) {
+    awarded = [50, 50];
+  } else if (p0correct) {
+    awarded = [100, 0];
+  } else if (p1correct) {
+    awarded = [0, 100];
+  }
+
+  state.scores[0] += awarded[0];
+  state.scores[1] += awarded[1];
+
+  const winner =
+    state.scores[0] >= WIN_SCORE ? 0 :
+    state.scores[1] >= WIN_SCORE ? 1 : null;
+
+  if (winner !== null) {
+    state.phase = "gameover";
+    render({ awarded, winner });
+    return;
+  }
+
+  state.phase = "reveal";
+  render({ awarded });
+
+  setTimeout(() => {
+    startRound();
+  }, 2500);
+}
 
 // ---------------------------------------------------------------------------
-// Round logic
+// Round lifecycle
 // ---------------------------------------------------------------------------
 
 function pickRound() {
   const pool = state.animals
-    .map((a, i) => i)
+    .map((_, i) => i)
     .filter(i => !state.used.has(i));
 
   if (pool.length < 2) {
-    // Ran out of animals — reset used set
     state.used.clear();
     return pickRound();
   }
 
-  const [iA, iB] = pool.sort(() => Math.random() - 0.5).slice(0, 2);
+  const shuffled = pool.sort(() => Math.random() - 0.5);
+  const [iA, iB] = shuffled;
   state.used.add(iA);
   state.used.add(iB);
 
-  const left = state.animals[iA];
+  const left  = state.animals[iA];
   const right = state.animals[iB];
   const answer =
-    left.weight_kg > right.weight_kg ? "left" :
-    right.weight_kg > left.weight_kg ? "right" : "tie";
+    left.weight_kg > right.weight_kg  ? "left"  :
+    right.weight_kg > left.weight_kg  ? "right" : "tie";
 
   state.round = { left, right, answer };
 }
 
+function startRound() {
+  pickRound();
+  state.guesses = [null, null];
+  state.timerStart = Date.now();
+  state.phase = "ready";
+  state.timerHandle = setTimeout(resolveRound, ROUND_MS);
+  render();
+}
+
 // ---------------------------------------------------------------------------
-// Input handling — P1: A (left) / Z (right)  |  P2: ← (left) / → (right)
+// Input — P1: A (left) / Z (right)   |   P2: ← (left) / → (right)
+// Players may change their guess freely until the timer fires.
 // ---------------------------------------------------------------------------
 
 const KEYS = {
-  KeyA:        { player: 0, guess: "left" },
+  KeyA:        { player: 0, guess: "left"  },
   KeyZ:        { player: 0, guess: "right" },
-  ArrowLeft:   { player: 1, guess: "left" },
+  ArrowLeft:   { player: 1, guess: "left"  },
   ArrowRight:  { player: 1, guess: "right" },
 };
 
@@ -80,25 +138,8 @@ document.addEventListener("keydown", (e) => {
   if (!binding) return;
 
   const { player, guess } = binding;
-  const correct = guess === state.round.answer;
-
-  if (correct) {
-    state.scores[player]++;
-    if (state.scores[player] >= WIN_SCORE) {
-      state.phase = "gameover";
-      render();
-      return;
-    }
-  }
-
-  state.phase = "reveal";
-  render({ lastPlayer: player, lastGuess: guess, correct });
-
-  setTimeout(() => {
-    pickRound();
-    state.phase = "ready";
-    render();
-  }, 2500);
+  state.guesses[player] = guess;
+  render();
 });
 
 // ---------------------------------------------------------------------------
@@ -106,8 +147,10 @@ document.addEventListener("keydown", (e) => {
 // ---------------------------------------------------------------------------
 
 function render(meta = {}) {
-  // TODO: update DOM elements based on state and meta
-  console.log("render", state.phase, state.scores, meta);
+  const elapsed  = state.timerStart ? Date.now() - state.timerStart : 0;
+  const remaining = Math.max(0, ROUND_MS - elapsed);
+  // TODO: update DOM elements based on state, meta, and remaining ms
+  console.log("render", state.phase, state.scores, state.guesses, `${(remaining / 1000).toFixed(1)}s`, meta);
 }
 
 // ---------------------------------------------------------------------------
@@ -115,13 +158,11 @@ function render(meta = {}) {
 // ---------------------------------------------------------------------------
 
 async function init() {
-  render(); // show loading state
+  render();
   try {
     state.animals = await fetchAnimals();
     if (state.animals.length < 2) throw new Error("Dataset too small");
-    pickRound();
-    state.phase = "ready";
-    render();
+    startRound();
   } catch (err) {
     console.error("Failed to load animals:", err);
     // TODO: show error UI
