@@ -1,79 +1,51 @@
-const HD_BASE    = "https://api.humandelta.ai";
-const HD_FS_PATH = "/agent/sea-swipes/animals.json";
+import { rounds } from "./mock_data/rounds";
+import { geminiPickRound } from "./geminiSelector";
 
-const QUEUE_MIN = 5;
-const QUEUE_MAX = 10;
+const QUEUE_MIN = 2;
 
 const _state = {
-  animals:   [],
-  used:      new Set(),
-  winner:    null,   // animal holding the winning seat; carries across rounds
-  pairQueue: [],
+  pool:   [],    // shuffled indices of rounds not yet queued
+  queue:  [],    // round objects ready to show
+  scores: [0, 0],
 };
 
+function _shuffledIndices() {
+  const arr = rounds.map((_, i) => i);
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+
 export async function initQueue() {
-  const resp = await fetch(`${HD_BASE}/v1/fs`, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${import.meta.env.VITE_HD_API_KEY}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ op: "read", path: HD_FS_PATH }),
-  });
-  if (!resp.ok) throw new Error(`HD FS read failed: ${resp.status}`);
-  const { content } = await resp.json();
-  _state.animals = JSON.parse(content);
-  if (_state.animals.length < 2) throw new Error("Dataset too small");
-  _refillQueue();
+  _state.scores = [0, 0];
+  _state.pool  = _shuffledIndices();
+  _state.queue = _state.pool.map(i => rounds[i]);
+  _state.pool  = [];
 }
 
-function _buildChallenger() {
-  let pool = _state.animals.map((_, i) => i).filter(i => !_state.used.has(i));
-  if (pool.length === 0) {
-    _state.used.clear();
-    if (_state.winner) {
-      const idx = _state.animals.indexOf(_state.winner);
-      if (idx !== -1) _state.used.add(idx);
-    }
-    pool = _state.animals.map((_, i) => i).filter(i => !_state.used.has(i));
-  }
-  const idx = pool[Math.floor(Math.random() * pool.length)];
-  _state.used.add(idx);
-  return _state.animals[idx];
-}
-
-function _refillQueue() {
-  while (_state.pairQueue.length < QUEUE_MAX) {
-    _state.pairQueue.push(_buildChallenger());
-  }
+export function setScores(p1, p2) {
+  _state.scores = [p1, p2];
 }
 
 export function getNextRound() {
-  if (_state.pairQueue.length <= QUEUE_MIN) _refillQueue();
-
-  let leftAnimal, rightAnimal;
-
-  if (_state.winner === null) {
-    // First round: pop two animals, place heavier on the left
-    const a = _state.pairQueue.shift();
-    const b = _state.pairQueue.shift();
-    leftAnimal  = a.weight_kg >= b.weight_kg ? a : b;
-    rightAnimal = a.weight_kg >= b.weight_kg ? b : a;
-  } else {
-    // Subsequent rounds: winner stays on the left, new challenger on the right
-    leftAnimal  = _state.winner;
-    rightAnimal = _state.pairQueue.shift();
+  if (_state.queue.length <= QUEUE_MIN) {
+    _refillQueue().catch(console.warn);
   }
+  return _state.queue.shift() ?? rounds[0];
+}
 
-  const correct = leftAnimal.weight_kg >= rightAnimal.weight_kg ? "left" : "right";
+async function _refillQueue() {
+  const pool = _shuffledIndices().map(i => rounds[i]);
 
-  // Advance the winner seat for the next round
-  _state.winner = correct === "left" ? leftAnimal : rightAnimal;
+  const geminiIdx = await geminiPickRound(pool, _state.scores);
 
-  return {
-    left:   { name: leftAnimal.name,  stat: Math.round(leftAnimal.weight_kg).toLocaleString(),  emoji: leftAnimal.emoji  },
-    right:  { name: rightAnimal.name, stat: Math.round(rightAnimal.weight_kg).toLocaleString(), emoji: rightAnimal.emoji },
-    prompt: "Which is heavier? (kg)",
-    correct,
-  };
+  if (geminiIdx !== null) {
+    // Splice Gemini's pick to the front, then append the rest
+    const [picked] = pool.splice(geminiIdx, 1);
+    _state.queue.push(picked, ...pool);
+  } else {
+    _state.queue.push(...pool);
+  }
 }

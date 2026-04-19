@@ -2,22 +2,24 @@
 build_dataset.py — one-time pipeline to build the SEA SWIPES animal dataset.
 
 Flow:
-  1. Kick off website crawl jobs on three marine-biology seed URLs via POST /v1/indexes.
-  2. Poll each job until status = "completed".
-  3. For each animal, run a HD vector search to find the best matching source URL
-     for attribution. Weights are hardcoded (accurate) — HD search is used only
-     for source discovery, not weight extraction.
-  4. Write the curated dataset to the HD virtual filesystem at
-     /agent/sea-swipes/animals.json via POST /v1/fs { op: "write" }.
+  1. Use pre-crawled indexes with actual content (fishbase, marinebio, NOAA,
+     oceana, marinemammalcenter). Wikipedia list-page crawls returned page_count=0.
+  2. For each animal, search the indexes, then fall back to general HD web search.
+     Walk top-5 results to find the closest weight match.
+     Animals are marked verified=True if the parsed weight is within
+     VERIFY_TOLERANCE (30%) of the hardcoded value.
+  3. Write the full dataset (all 60 animals) to HD FS at
+     /agent/sea-swipes/animals.json. HD weight is used when verified;
+     hardcoded weight is the fallback.
 
-The game (game.js) reads /agent/sea-swipes/animals.json at startup
-via the same FS API — no local JSON file needed.
+The game reads /agent/sea-swipes/animals.json at startup via the FS API.
 
 Requires:  pip install requests
 Env var:   HD_API_KEY — your Human Delta API key (hd_live_...)
 """
 
 import os
+import re
 import time
 import json
 import requests
@@ -26,10 +28,14 @@ HD_API_KEY = os.environ["HD_API_KEY"]
 BASE_URL = "https://api.humandelta.ai"
 HEADERS = {"Authorization": f"Bearer {HD_API_KEY}", "Content-Type": "application/json"}
 
-SEED_SITES = [
-    ("Oceana Marine Life",       "https://oceana.org/marine-life/"),
-    ("NOAA Fisheries Species",   "https://www.fisheries.noaa.gov/species"),
-    ("Marine Mammal Center",     "https://www.marinemammalcenter.org/animal-care/learn-about-marine-mammals"),
+# Pre-crawled indexes with actual content (page_count > 0).
+# Wikipedia list-page crawls all returned page_count=0, so we use these instead.
+EXISTING_INDEX_IDS = [
+    "9c09b49e-4ea0-4e37-8b7b-3c957aa61303",  # fishbase.se           (100 pages)
+    "6a723596-ef21-41e0-bb63-5a0123fbc5d4",  # marinebio.org/species (100 pages)
+    "cc838144-a835-40b7-8abb-b9aa0ffb1c40",  # marinemammalcenter.org (100 pages)
+    "0b15726f-49fe-4eb4-9bf7-49136631ccc1",  # fisheries.noaa.gov    (99 pages)
+    "f48e2e0a-976a-49d7-b471-de4749cb9fcf",  # oceana.org/marine-life (86 pages)
 ]
 
 # (name, emoji, weight_kg, fun_fact)
@@ -97,8 +103,9 @@ ANIMALS = [
     ("Horseshoe Crab",         "🦀",       5, "Living fossil, 450 million years old"),
 ]
 
-POLL_INTERVAL = 5   # seconds; docs recommend 3-5 s
-HD_FS_PATH = "/agent/sea-swipes/animals.json"
+POLL_INTERVAL    = 5     # seconds; docs recommend 3-5 s
+HD_FS_PATH       = "/agent/sea-swipes/animals.json"
+VERIFY_TOLERANCE = 0.30  # allow ±30% variance between hardcoded and HD-parsed weight
 
 
 # ---------------------------------------------------------------------------
@@ -106,17 +113,22 @@ HD_FS_PATH = "/agent/sea-swipes/animals.json"
 # ---------------------------------------------------------------------------
 
 def start_crawl(name: str, url: str) -> str:
-    resp = requests.post(
-        f"{BASE_URL}/v1/indexes",
-        headers=HEADERS,
-        json={
-            "source_type": "website",
-            "name": name,
-            "website": {"url": url, "max_pages": 100},
-        },
-    )
-    resp.raise_for_status()
-    return resp.json()["index_id"]
+    while True:
+        resp = requests.post(
+            f"{BASE_URL}/v1/indexes",
+            headers=HEADERS,
+            json={
+                "source_type": "website",
+                "name": name,
+                "website": {"url": url, "max_pages": 100},
+            },
+        )
+        if resp.status_code == 429:
+            print(f"  (rate limit — waiting 30s for a slot...)", flush=True)
+            time.sleep(30)
+            continue
+        resp.raise_for_status()
+        return resp.json()["index_id"]
 
 
 def poll_until_complete(index_id: str) -> None:
@@ -140,28 +152,84 @@ def poll_until_complete(index_id: str) -> None:
 
 
 # ---------------------------------------------------------------------------
-# Step 2 — HD search for source URL attribution
+# Step 2 — HD search: verify weight and find source URL
 # ---------------------------------------------------------------------------
 
-def search_source(animal_name: str) -> dict:
-    resp = requests.post(
-        f"{BASE_URL}/v1/search",
-        headers=HEADERS,
-        json={
-            "query": f"{animal_name} marine animal",
-            "top_k": 1,
-            "sources": ["web"],
-        },
-    )
-    resp.raise_for_status()
-    results = resp.json().get("results", [])
-    if not results:
-        return {"score": 0.0, "source_url": ""}
-    top = results[0]
-    return {
-        "score":      top["score"],
-        "source_url": top["source_url"],
-    }
+def parse_weight_kg(text: str) -> float | None:
+    """Extract first weight value from structured fact-sheet text."""
+    # kg / kilograms
+    m = re.search(r"([\d,]+(?:\.\d+)?)\s*kg", text, re.IGNORECASE)
+    if m:
+        return float(m.group(1).replace(",", ""))
+    # metric tonnes
+    m = re.search(r"([\d,]+(?:\.\d+)?)\s*(?:metric\s*)?tonn?e", text, re.IGNORECASE)
+    if m:
+        return float(m.group(1).replace(",", "")) * 1000
+    # short tons
+    m = re.search(r"([\d,]+(?:\.\d+)?)\s*(?:short\s*)?tons?", text, re.IGNORECASE)
+    if m:
+        return float(m.group(1).replace(",", "")) * 907.185
+    # pounds / lbs
+    m = re.search(r"([\d,]+(?:\.\d+)?)\s*(?:lb|lbs|pounds?)", text, re.IGNORECASE)
+    if m:
+        return float(m.group(1).replace(",", "")) * 0.453592
+    return None
+
+
+def search_and_verify(animal_name: str, known_weight_kg: float, index_ids: list[str]) -> dict:
+    """
+    Search crawled Wikipedia indexes for '{animal} weight kg', then fall back
+    to general web search if the index search finds nothing useful.
+    Returns score, source_url, hd_weight (or None), and verified flag.
+    """
+    # Try all results across top_k=5 to find the best weight match
+    for source_spec in [index_ids, ["web"]]:
+        payload = {
+            "query": f"{animal_name} weight kg",
+            "top_k": 5,
+        }
+        if isinstance(source_spec, list) and source_spec and isinstance(source_spec[0], str) and source_spec[0] != "web":
+            payload["index_ids"] = source_spec
+        else:
+            payload["sources"] = ["web"]
+
+        resp = requests.post(f"{BASE_URL}/v1/search", headers=HEADERS, json=payload)
+        resp.raise_for_status()
+        results = resp.json().get("results", [])
+
+        # Walk results and pick the closest weight match
+        best = None
+        for r in results:
+            w = parse_weight_kg(r["text"])
+            if w is None:
+                continue
+            if known_weight_kg > 0:
+                ratio = abs(w - known_weight_kg) / known_weight_kg
+                if ratio <= VERIFY_TOLERANCE:
+                    # Verified hit — take it immediately
+                    return {
+                        "score":      r["score"],
+                        "source_url": r["source_url"],
+                        "hd_weight":  round(w),
+                        "verified":   True,
+                    }
+                if best is None or ratio < abs(best[0] - known_weight_kg) / known_weight_kg:
+                    best = (w, r)
+            else:
+                if best is None:
+                    best = (w, r)
+
+        if best is not None:
+            w, r = best
+            return {
+                "score":      r["score"],
+                "source_url": r["source_url"],
+                "hd_weight":  round(w),
+                "verified":   False,
+            }
+
+    # Nothing found in either source
+    return {"score": 0.0, "source_url": "", "hd_weight": None, "verified": False}
 
 
 # ---------------------------------------------------------------------------
@@ -188,40 +256,53 @@ def write_to_hd_fs(dataset: list[dict]) -> None:
 # ---------------------------------------------------------------------------
 
 def main():
-    # Step 1 — kick off crawls
-    print("Starting crawl index jobs...")
-    index_ids = []
-    for name, url in SEED_SITES:
-        index_id = start_crawl(name, url)
-        print(f"  Queued: '{name}' -> {index_id}")
-        index_ids.append(index_id)
+    # Step 1 — use pre-crawled indexes (Wikipedia crawls returned page_count=0)
+    index_ids = EXISTING_INDEX_IDS
+    print(f"Using {len(index_ids)} existing indexes with content.")
 
-    print("Polling until all crawls complete...")
-    for index_id in index_ids:
-        poll_until_complete(index_id)
-        print(f"  Completed: {index_id}")
-
-    # Step 2 — search for source URLs (weights are hardcoded)
-    print(f"\nFinding source URLs for {len(ANIMALS)} animals...")
+    # Step 2 — verify weights via HD search; prefer real data over hardcoded
+    print(f"\nVerifying weights for {len(ANIMALS)} animals via HD search...")
     dataset = []
+    unverified = []
 
-    for name, emoji, weight_kg, fun_fact in ANIMALS:
+    for name, emoji, hardcoded_kg, fun_fact in ANIMALS:
         print(f"  {name}... ", end="", flush=True)
-        result = search_source(name)
+        result = search_and_verify(name, hardcoded_kg, index_ids)
+
+        # Real data takes priority — use HD weight when verified, hardcoded as fallback
+        final_weight_kg = result["hd_weight"] if result["verified"] else hardcoded_kg
+        source = "hd" if result["verified"] else "hardcoded"
+
+        status = f"OK  hd={result['hd_weight']:,} kg -> using hd" if result["verified"] \
+            else f"UNVERIFIED  hd={result['hd_weight']:,} kg -> using hardcoded" if result["hd_weight"] \
+            else "UNVERIFIED  hd=none -> using hardcoded"
+        print(f"{final_weight_kg:,} kg  [{status}  score={result['score']:.2f}]")
+
+        if not result["verified"]:
+            unverified.append((name, hardcoded_kg, result["hd_weight"]))
+
         dataset.append({
-            "name":      name,
-            "weight_kg": weight_kg,
-            "hd_score":  round(result["score"], 4),
-            "source":    result["source_url"],
-            "fun_fact":  fun_fact,
-            "emoji":     emoji,
+            "name":          name,
+            "weight_kg":     final_weight_kg,
+            "weight_source": source,
+            "hd_score":      round(result["score"], 4),
+            "verified":      result["verified"],
+            "source":        result["source_url"],
+            "fun_fact":      fun_fact,
+            "emoji":         emoji,
         })
-        print(f"{weight_kg:,} kg  (source score={result['score']:.2f})")
 
     dataset.sort(key=lambda x: x["weight_kg"], reverse=True)
 
+    verified_count = sum(1 for a in dataset if a["verified"])
+    if unverified:
+        print(f"\nUnverified ({len(unverified)}) — hardcoded weight used as fallback:")
+        for name, known, hd in unverified:
+            hd_str = f"{hd:,}" if hd else "no parse"
+            print(f"  {name}: hardcoded={known:,} kg  hd_found={hd_str} kg")
+
     # Step 3 — persist to HD filesystem
-    print(f"\nWriting {len(dataset)} animals to HD FS at {HD_FS_PATH}...")
+    print(f"\nWriting {len(dataset)} animals ({verified_count} HD-verified, {len(unverified)} hardcoded fallback) to {HD_FS_PATH}...")
     write_to_hd_fs(dataset)
     print("Done.")
 
