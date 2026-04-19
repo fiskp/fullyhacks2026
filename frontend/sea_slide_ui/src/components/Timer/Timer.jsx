@@ -1,6 +1,6 @@
 import "./Timer.css";
 { /* Timer component */ }
-function Timer({ gameStarted, timeLeft }) {
+function Timer({ gameStarted, timeLeft, currentRound }) {
 
   function getTimerColor() {
     if (timeLeft > 5) return "var(--white)";
@@ -10,6 +10,11 @@ function Timer({ gameStarted, timeLeft }) {
 
   return (
     <div className="timer-bar">
+      {gameStarted && (
+        <span className="round-counter">
+          Round {currentRound + 1} / 6
+        </span>
+      )}
       <span
         className="timer-number"
         style={{ color: getTimerColor() }}

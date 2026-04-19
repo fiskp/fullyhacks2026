@@ -30,4 +30,10 @@ export const rounds = [
     prompt: "Which one lives longer? (years)",
     correct: "left"
   },
+  {
+  left:   { name: "Mantis Shrimp",  stat: 110 },
+  right:  { name: "Pistol Shrimp",  stat: 210 },
+  prompt: "Which one hits harder? (km/h strike)",
+  correct: "right"
+},
 ];

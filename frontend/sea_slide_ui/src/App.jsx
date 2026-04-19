@@ -4,6 +4,7 @@ import Navbar from "./components/Navbar/Navbar";
 import Timer from "./components/Timer/Timer";
 import GameCards from "./components/GameCards/GameCards";
 import { rounds } from "./mock_data/rounds";
+import { useNavigate } from "react-router-dom";
 
 function App() {
 
@@ -16,17 +17,23 @@ function App() {
   const [timeLeft, setTimeLeft]         = useState(10);
   const [revealed, setRevealed]         = useState(false);
 
-  /* useRef lets us read current values inside setTimeout without stale closures */
+  const navigate = useNavigate();
+
+  /* Refs to avoid stale closures inside setTimeout */
   const p1Ref       = useRef(p1Position);
   const p2Ref       = useRef(p2Position);
   const roundRef    = useRef(currentRound);
   const revealedRef = useRef(revealed);
+  const p1ScoreRef  = useRef(0);
+  const p2ScoreRef  = useRef(0);
 
   /* Keep refs in sync with state */
-  useEffect(() => { p1Ref.current = p1Position; },    [p1Position]);
-  useEffect(() => { p2Ref.current = p2Position; },    [p2Position]);
+  useEffect(() => { p1Ref.current = p1Position; },      [p1Position]);
+  useEffect(() => { p2Ref.current = p2Position; },      [p2Position]);
   useEffect(() => { roundRef.current = currentRound; }, [currentRound]);
-  useEffect(() => { revealedRef.current = revealed; }, [revealed]);
+  useEffect(() => { revealedRef.current = revealed; },  [revealed]);
+  useEffect(() => { p1ScoreRef.current = p1Score; },    [p1Score]);
+  useEffect(() => { p2ScoreRef.current = p2Score; },    [p2Score]);
 
   const round = rounds[currentRound];
 
@@ -56,7 +63,7 @@ function App() {
     return () => window.removeEventListener("keydown", handleKeys);
   }, [gameStarted, revealed]);
 
-  /* Timer — clean and simple */
+  /* Timer — reveals on 0, auto advances, navigates to results */
   useEffect(() => {
     if (!gameStarted || revealed) return;
 
@@ -65,29 +72,36 @@ function App() {
         if (t <= 1) {
           clearInterval(interval);
 
-          /* Reveal using refs so values are always current */
+          /* Score calculation using refs */
           const correctSide = rounds[roundRef.current].correct;
-          const p1Correct = p1Ref.current === correctSide;
-          const p2Correct = p2Ref.current === correctSide;
+          const p1Correct   = p1Ref.current === correctSide;
+          const p2Correct   = p2Ref.current === correctSide;
 
           if (p1Correct && p2Correct) {
-            /* Both correct — 1 point each */
             setP1Score(s => s + 1);
             setP2Score(s => s + 1);
           } else {
-            /* Only one correct — 2 points */
             if (p1Correct) setP1Score(s => s + 2);
             if (p2Correct) setP2Score(s => s + 2);
           }
+
           setRevealed(true);
 
           /* Auto advance after 2 seconds */
           setTimeout(() => {
             const next = roundRef.current + 1;
+
             if (next >= rounds.length) {
-              alert("Game Over!");
+              /* Game over — navigate to results with final scores */
+              navigate("/results", {
+                state: {
+                  p1Score: p1ScoreRef.current,
+                  p2Score: p2ScoreRef.current,
+                }
+              });
               return;
             }
+
             setCurrentRound(next);
             setP1Position(null);
             setP2Position(null);
@@ -102,9 +116,9 @@ function App() {
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [gameStarted, revealed]);
+  }, [gameStarted, revealed, navigate]);
 
-  /* Check if position is correct */
+  /* Check if position is correct — used for green/red colors */
   function isCorrect(position) {
     if (!position) return false;
     return position === round.correct;
@@ -120,7 +134,11 @@ function App() {
       )}
 
       <Navbar p1Score={p1Score} p2Score={p2Score} />
-      <Timer gameStarted={gameStarted} timeLeft={timeLeft} />
+      <Timer
+        gameStarted={gameStarted}
+        timeLeft={timeLeft}
+        currentRound={currentRound}
+      />
       <GameCards
         round={round}
         p1Position={p1Position}
