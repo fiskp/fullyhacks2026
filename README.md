@@ -1,10 +1,10 @@
-# SEA SLIDES
+# SEA SWIPES
 
 A 2-player local party game where players compete to guess which marine animal weighs more. Runs entirely on one machine with a shared screen.
 
 ## Architecture
 
-The animal dataset lives in the **Human Delta virtual filesystem** at `/agent/sea-slides/animals.json`. `build_dataset.py` writes it there once; the game reads it at runtime via the HD FS API — no local JSON file is bundled.
+The animal dataset lives in the **Human Delta virtual filesystem** at `/agent/sea-swipes/animals.json`. `build_dataset.py` writes it there once; the game reads it at runtime via the HD FS API — no local JSON file is bundled.
 
 ```
 /data/                   — unused; dataset is stored in HD FS, not locally
@@ -26,10 +26,10 @@ Runs once before the hackathon demo. Three steps:
 2. Polls `GET /v1/indexes/{id}` every 5 s until each job reaches `status: "completed"`.
 3. For each of 60 hardcoded animal names, calls `POST /v1/search` for weight data,
    filters results below a 0.85 cosine-similarity threshold, parses the weight value,
-   then writes the curated array to `POST /v1/fs { op: "write", path: "/agent/sea-slides/animals.json" }`.
+   then writes the curated array to `POST /v1/fs { op: "write", path: "/agent/sea-swipes/animals.json" }`.
 
 ### `game/game.js`
-On page load, calls `POST /v1/fs { op: "read", path: "/agent/sea-slides/animals.json" }` to
+On page load, calls `POST /v1/fs { op: "read", path: "/agent/sea-swipes/animals.json" }` to
 fetch the dataset. After that all game logic (round selection, scoring, win detection) runs
 entirely client-side with no further API calls.
 

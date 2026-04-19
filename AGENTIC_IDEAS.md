@@ -1,4 +1,4 @@
-# Agentic Enhancement Ideas — SEA SLIDES
+# Agentic Enhancement Ideas — SEA SWIPES
 
 AI integration points using Google Gemini API. Key to be added to `.env` as `GEMINI_API_KEY`.
 

@@ -1,7 +1,7 @@
-// SEA SLIDES — game logic: round management, scoring, input handling, win conditions
+// SEA SWIPES — game logic: round management, scoring, input handling, win conditions
 
 const HD_BASE   = "https://api.humandelta.ai";
-const HD_FS_PATH = "/agent/sea-slides/animals.json";
+const HD_FS_PATH = "/agent/sea-swipes/animals.json";
 
 // HD_API_KEY must be set before game loads — inject via a <script> tag in index.html:
 //   <script>window.HD_API_KEY = "hd_live_...";</script>

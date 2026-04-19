@@ -1,15 +1,16 @@
 """
-build_dataset.py — one-time pipeline to build the Depth Charge animal dataset.
+build_dataset.py — one-time pipeline to build the SEA SWIPES animal dataset.
 
 Flow:
   1. Kick off website crawl jobs on three marine-biology seed URLs via POST /v1/indexes.
   2. Poll each job until status = "completed".
-  3. Vector-search each animal's weight via POST /v1/search.
-  4. Filter results with score < 0.85, parse weight from text.
-  5. Write the curated dataset to the HD virtual filesystem at
-     /agent/sea-slides/animals.json via POST /v1/fs { op: "write" }.
+  3. For each animal, run a HD vector search to find the best matching source URL
+     for attribution. Weights are hardcoded (accurate) — HD search is used only
+     for source discovery, not weight extraction.
+  4. Write the curated dataset to the HD virtual filesystem at
+     /agent/sea-swipes/animals.json via POST /v1/fs { op: "write" }.
 
-The game (game.js) reads /agent/sea-slides/animals.json at startup
+The game (game.js) reads /agent/sea-swipes/animals.json at startup
 via the same FS API — no local JSON file needed.
 
 Requires:  pip install requests
@@ -97,7 +98,7 @@ ANIMALS = [
 
 SCORE_THRESHOLD = 0.50
 POLL_INTERVAL = 5   # seconds; docs recommend 3-5 s
-HD_FS_PATH = "/agent/sea-slides/animals.json"
+HD_FS_PATH = "/agent/sea-swipes/animals.json"
 
 
 # ---------------------------------------------------------------------------
