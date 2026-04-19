@@ -35,7 +35,7 @@ function Home() {
       <div className="home-content">
 
         <h1 className="home-title">SEA SWIPE</h1>
-        <p className="home-sub">What do you want to explore today?</p>
+        <p className="home-sub">First player to reach 10 points will win the game</p>
 
         {/* Input with gradient border */}
         <div className="input-wrapper">
