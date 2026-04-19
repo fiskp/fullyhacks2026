@@ -1,13 +1,13 @@
 import { useState, useEffect, useRef } from "react";
-import "./App.css";
-import Navbar from "./components/Navbar/Navbar";
-import Timer from "./components/Timer/Timer";
-import GameCards from "./components/GameCards/GameCards";
-import { initQueue, getNextRound, setScores, advanceWinner } from "./gameLogic";
+import "../../App.css";
+import "./EricGame.css";
+import Navbar from "../../components/Navbar/Navbar";
+import Timer from "../../components/Timer/Timer";
+import GameCards from "../../components/GameCards/GameCards";
+import { initEricQueue, getNextEricRound, setEricScores, advanceEricWinner } from "../../gameLogicEric";
 import { useNavigate } from "react-router-dom";
 
-function App() {
-
+function EricGame() {
   const [gameStarted, setGameStarted]   = useState(false);
   const [p1Score, setP1Score]           = useState(0);
   const [p2Score, setP2Score]           = useState(0);
@@ -18,79 +18,64 @@ function App() {
   const [revealed, setRevealed]         = useState(false);
   const [roundData, setRoundData]       = useState(null);
   const [queueReady, setQueueReady]     = useState(false);
+  const [error, setError]               = useState(null);
 
   const navigate = useNavigate();
 
-  /* Refs to avoid stale closures inside setTimeout */
   const p1Ref       = useRef(p1Position);
   const p2Ref       = useRef(p2Position);
   const roundRef    = useRef(currentRound);
   const revealedRef = useRef(revealed);
   const p1ScoreRef  = useRef(0);
   const p2ScoreRef  = useRef(0);
-
   const roundDataRef = useRef(roundData);
 
-  /* Keep refs in sync with state */
-  useEffect(() => { p1Ref.current = p1Position; },        [p1Position]);
-  useEffect(() => { p2Ref.current = p2Position; },        [p2Position]);
-  useEffect(() => { roundRef.current = currentRound; },   [currentRound]);
-  useEffect(() => { revealedRef.current = revealed; },    [revealed]);
-  useEffect(() => { p1ScoreRef.current = p1Score; },      [p1Score]);
-  useEffect(() => { p2ScoreRef.current = p2Score; },      [p2Score]);
-  useEffect(() => { roundDataRef.current = roundData; },  [roundData]);
+  useEffect(() => { p1Ref.current = p1Position; },       [p1Position]);
+  useEffect(() => { p2Ref.current = p2Position; },       [p2Position]);
+  useEffect(() => { roundRef.current = currentRound; },  [currentRound]);
+  useEffect(() => { revealedRef.current = revealed; },   [revealed]);
+  useEffect(() => { p1ScoreRef.current = p1Score; },     [p1Score]);
+  useEffect(() => { p2ScoreRef.current = p2Score; },     [p2Score]);
+  useEffect(() => { roundDataRef.current = roundData; }, [roundData]);
 
-  /* Load animal queue on mount */
   useEffect(() => {
-    initQueue()
+    initEricQueue()
       .then(() => {
-        setRoundData(getNextRound());
+        setRoundData(getNextEricRound());
         setQueueReady(true);
       })
-      .catch(err => console.error("Failed to load animals:", err));
+      .catch(err => setError(err.message));
   }, []);
 
-  /* Auto start when animal queue is ready */
   useEffect(() => {
-    if (queueReady) {
-      setGameStarted(true);
-    }
+    if (queueReady) setGameStarted(true);
   }, [queueReady]);
 
-  /* Arrow keys — only before reveal */
   useEffect(() => {
     if (!gameStarted || revealed) return;
-
     function handleKeys(e) {
       if (e.key === "ArrowLeft")  setP1Position("left");
       if (e.key === "ArrowRight") setP1Position("right");
       if (e.key === "a")          setP2Position("left");
       if (e.key === "d")          setP2Position("right");
     }
-
     window.addEventListener("keydown", handleKeys);
     return () => window.removeEventListener("keydown", handleKeys);
   }, [gameStarted, revealed]);
 
-  /* WebSocket — receives CV swipe events from Python */
   useEffect(() => {
     const ws = new WebSocket("ws://localhost:8765");
-    
     ws.onmessage = (event) => {
       const data = event.data;
-      if (data === "p1_right") window.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight' }));
-      if (data === "p1_left")  window.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft' }));
-      if (data === "p2_right") window.dispatchEvent(new KeyboardEvent('keydown', { key: 'd' }));
-      if (data === "p2_left")  window.dispatchEvent(new KeyboardEvent('keydown', { key: 'a' }));
-      if (data === "start")    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter' }));
+      if (data === "p1_right") window.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowRight" }));
+      if (data === "p1_left")  window.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowLeft"  }));
+      if (data === "p2_right") window.dispatchEvent(new KeyboardEvent("keydown", { key: "d" }));
+      if (data === "p2_left")  window.dispatchEvent(new KeyboardEvent("keydown", { key: "a" }));
     };
+    ws.onerror = () => {};
+    return () => ws.close();
+  }, []);
 
-  ws.onerror = (err) => console.log("WebSocket error:", err);
-
-  return () => ws.close();
-}, []);
-
-  /* Timer — reveals on 0, auto advances, navigates to results */
   useEffect(() => {
     if (!gameStarted || revealed) return;
 
@@ -99,7 +84,6 @@ function App() {
         if (t <= 1) {
           clearInterval(interval);
 
-          /* Score calculation using refs */
           const correctSide = roundDataRef.current?.correct;
           const p1Correct   = p1Ref.current === correctSide;
           const p2Correct   = p2Ref.current === correctSide;
@@ -107,33 +91,26 @@ function App() {
           if (p1Correct && p2Correct) {
             setP1Score(s => s + 1);
             setP2Score(s => s + 1);
-            setScores(p1ScoreRef.current + 1, p2ScoreRef.current + 1);
+            setEricScores(p1ScoreRef.current + 1, p2ScoreRef.current + 1);
           } else {
-            if (p1Correct)  { setP1Score(s => s + 2); setScores(p1ScoreRef.current + 2, p2ScoreRef.current); }
-            if (p2Correct)  { setP2Score(s => s + 2); setScores(p1ScoreRef.current, p2ScoreRef.current + 2); }
-            if (!p1Correct && !p2Correct) setScores(p1ScoreRef.current, p2ScoreRef.current);
+            if (p1Correct)  { setP1Score(s => s + 2); setEricScores(p1ScoreRef.current + 2, p2ScoreRef.current); }
+            if (p2Correct)  { setP2Score(s => s + 2); setEricScores(p1ScoreRef.current, p2ScoreRef.current + 2); }
+            if (!p1Correct && !p2Correct) setEricScores(p1ScoreRef.current, p2ScoreRef.current);
           }
 
           setRevealed(true);
 
-          /* Auto advance after 2 seconds */
           setTimeout(() => {
-            const next = roundRef.current + 1;
-
-            /* First to 10 points wins */
             if (p1ScoreRef.current >= 10 || p2ScoreRef.current >= 10) {
               navigate("/results", {
-                state: {
-                  p1Score: p1ScoreRef.current,
-                  p2Score: p2ScoreRef.current,
-                }
+                state: { p1Score: p1ScoreRef.current, p2Score: p2ScoreRef.current },
               });
               return;
             }
 
-            advanceWinner(correctSide);
-            setRoundData(getNextRound());
-            setCurrentRound(next);
+            advanceEricWinner(correctSide);
+            setRoundData(getNextEricRound());
+            setCurrentRound(r => r + 1);
             setP1Position(null);
             setP2Position(null);
             setRevealed(false);
@@ -154,14 +131,22 @@ function App() {
     return position === roundData.correct;
   }
 
-  return (
-    <div className="game">
+  if (error) {
+    return (
+      <div className="game">
+        <div className="eric-error">
+          <p>Failed to load Eric Ly questions: {error}</p>
+          <button onClick={() => navigate("/")}>Back to Home</button>
+        </div>
+      </div>
+    );
+  }
 
+  return (
+    <div className="game eric-game">
+      <div className="eric-banner">ERIC LY EDITION</div>
       <Navbar p1Score={p1Score} p2Score={p2Score} />
-      <Timer
-        gameStarted={gameStarted}
-        timeLeft={timeLeft}
-      />
+      <Timer gameStarted={gameStarted} timeLeft={timeLeft} />
       {roundData && (
         <GameCards
           round={roundData}
@@ -171,9 +156,8 @@ function App() {
           isCorrect={isCorrect}
         />
       )}
-
     </div>
   );
 }
 
-export default App;
+export default EricGame;

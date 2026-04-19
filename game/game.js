@@ -153,16 +153,16 @@ function startRound() {
 }
 
 // ---------------------------------------------------------------------------
-// Input — P1: A (winner) / Z (challenger)   |   P2: ← (winner) / → (challenger)
+// Input — P1: ← (winner) / → (challenger)   |   P2: A (winner) / D (challenger)
 // Winner is always displayed on the left; challenger on the right.
 // Players may change their guess freely until the 15s timer fires.
 // ---------------------------------------------------------------------------
 
 const KEYS = {
-  KeyA:        { player: 0, guess: "winner"     },
-  KeyZ:        { player: 0, guess: "challenger" },
-  ArrowLeft:   { player: 1, guess: "winner"     },
-  ArrowRight:  { player: 1, guess: "challenger" },
+  ArrowLeft:   { player: 0, guess: "winner"     },
+  ArrowRight:  { player: 0, guess: "challenger" },
+  KeyA:        { player: 1, guess: "winner"     },
+  KeyD:        { player: 1, guess: "challenger" },
 };
 
 document.addEventListener("keydown", (e) => {
