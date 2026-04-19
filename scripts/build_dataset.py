@@ -95,7 +95,7 @@ ANIMALS = [
     ("Pacific Sleeper Shark",     "🦈", "Slow-moving deep-water giant"),
 ]
 
-SCORE_THRESHOLD = 0.85
+SCORE_THRESHOLD = 0.50
 POLL_INTERVAL = 5   # seconds; docs recommend 3-5 s
 HD_FS_PATH = "/agent/sea-slides/animals.json"
 
@@ -120,9 +120,16 @@ def start_crawl(name: str, url: str) -> str:
 
 def poll_until_complete(index_id: str) -> None:
     terminal = {"completed", "failed", "cancelled"}
+    time.sleep(3)  # brief pause before first poll to avoid race on new jobs
+    retries = 0
     while True:
         resp = requests.get(f"{BASE_URL}/v1/indexes/{index_id}", headers=HEADERS)
+        if resp.status_code == 401 and retries < 5:
+            retries += 1
+            time.sleep(POLL_INTERVAL)
+            continue
         resp.raise_for_status()
+        retries = 0
         status = resp.json()["status"]
         if status == "completed":
             return
