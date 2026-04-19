@@ -1,0 +1,25 @@
+.timer-bar {
+  background: var(--ocean-dark);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 0;
+  flex-shrink: 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.round-counter {
+  font-size: 12px;
+  color: var(--white-muted);
+  font-family: 'Exo 2', sans-serif;
+  letter-spacing: 2px;
+  margin-bottom: 2px;
+}
+
+.timer-number {
+  font-family: 'Exo 2', sans-serif;
+  font-size: 30px;
+  font-weight: 700;
+  text-align: center;
+}

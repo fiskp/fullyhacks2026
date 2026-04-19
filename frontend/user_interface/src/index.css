@@ -1,0 +1,48 @@
+/* ── Google Fonts ──
+   Cinzel for headings and logo.
+   Exo 2 for all body text and UI. */
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Exo+2:wght@400;600;700&display=swap');
+
+
+/* global styling */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+/* Color variables */
+:root {
+  --ocean-deep:   #0a1628;
+  --ocean-dark:   #061020;
+  --ocean-mid:    #0d2b4e;
+  --ocean-light:  #0a2040;
+
+  --cyan:         #00b4d8;
+  --cyan-faint:   rgba(0, 180, 216, 0.1);
+  --cyan-border:  rgba(0, 180, 216, 0.3);
+
+  --red:          #e94560;
+  --red-faint:    rgba(233, 69, 96, 0.1);
+  --red-border:   rgba(233, 69, 96, 0.3);
+
+  --green:        #1bc47d;
+
+  --white:        #ffffff;
+  --white-muted:  rgba(255, 255, 255, 0.6);
+  --white-faint:  rgba(255, 255, 255, 0.07);
+}
+
+/* layout and typography */
+body {
+  background-color: var(--ocean-deep);
+  font-family: 'Exo 2', sans-serif;
+  font-size: 16px;
+  color: var(--white);
+  overflow: hidden;
+}
+
+/* Typography */
+h1, h2, h3 {
+  font-family: 'Cinzel', serif;
+}
