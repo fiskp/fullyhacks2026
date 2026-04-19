@@ -3,8 +3,8 @@ import "./Timer.css";
 function Timer({ gameStarted, timeLeft, currentRound }) {
 
   function getTimerColor() {
-    if (timeLeft > 8) return "var(--white)";
-    if (timeLeft > 4) return "#f5a623";
+    if (timeLeft > 5) return "var(--white)";
+    if (timeLeft > 2) return "#f5a623";
     return "var(--red)";
   }
 
