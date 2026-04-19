@@ -110,10 +110,10 @@ VERIFY_TOLERANCE = 0.30  # allow ±30% variance between hardcoded and HD-parsed 
 
 
 # ---------------------------------------------------------------------------
-# Step 1 — Crawl index jobs
+# Step 0 — Crawl individual Wikipedia species pages via HD
 # ---------------------------------------------------------------------------
 
-def start_crawl(name: str, url: str) -> str:
+def start_crawl(name: str, url: str, max_pages: int = 100) -> str:
     while True:
         resp = requests.post(
             f"{BASE_URL}/v1/indexes",
@@ -121,7 +121,7 @@ def start_crawl(name: str, url: str) -> str:
             json={
                 "source_type": "website",
                 "name": name,
-                "website": {"url": url, "max_pages": 100},
+                "website": {"url": url, "max_pages": max_pages},
             },
         )
         if resp.status_code == 429:
@@ -150,6 +150,43 @@ def poll_until_complete(index_id: str) -> None:
         if status in terminal:
             raise RuntimeError(f"Crawl {index_id} ended with status '{status}'")
         time.sleep(POLL_INTERVAL)
+
+
+def crawl_wikipedia_pages(animals: list) -> list[str]:
+    """
+    Start one HD crawl job per animal Wikipedia page (max_pages=3 to catch
+    infobox + body without wandering to unrelated articles).
+    Returns the index_ids of jobs that completed successfully.
+    """
+    print(f"\nStep 0 — Crawling {len(animals)} Wikipedia species pages via HD...")
+    jobs: list[tuple[str, str]] = []  # (animal_name, index_id)
+
+    for name, _emoji, _kg, _fact, wiki_url in animals:
+        print(f"  {name}... ", end="", flush=True)
+        slug = name.lower().replace("'", "").replace(" ", "-")
+        idx = start_crawl(f"wiki-{slug}", wiki_url, max_pages=3)
+        jobs.append((name, idx))
+        print(f"queued ({idx[:8]}...)")
+        time.sleep(0.5)  # brief pause to stay within burst limits
+
+    print(f"\n  Polling {len(jobs)} crawl jobs...")
+    completed: list[str] = []
+    for name, idx in jobs:
+        print(f"  {name}... ", end="", flush=True)
+        try:
+            poll_until_complete(idx)
+            completed.append(idx)
+            print("done")
+        except RuntimeError as e:
+            print(f"FAILED ({e})")
+
+    print(f"  {len(completed)}/{len(jobs)} Wikipedia indexes ready.\n")
+    return completed
+
+
+# ---------------------------------------------------------------------------
+# Step 1 — Existing marine-bio index IDs (already crawled)
+# ---------------------------------------------------------------------------
 
 
 # ---------------------------------------------------------------------------
@@ -257,9 +294,16 @@ def write_to_hd_fs(dataset: list[dict]) -> None:
 # ---------------------------------------------------------------------------
 
 def main():
-    # Step 1 — use pre-crawled indexes (Wikipedia crawls returned page_count=0)
-    index_ids = EXISTING_INDEX_IDS
-    print(f"Using {len(index_ids)} existing indexes with content.")
+    # Step 0 — Crawl individual Wikipedia species pages and index via HD.
+    # Earlier attempts to crawl Wikipedia list/category pages returned page_count=0
+    # (likely JS-gated). Crawling individual species pages (max_pages=3) avoids
+    # that issue while keeping each job small.
+    wiki_index_ids = crawl_wikipedia_pages(ANIMALS)
+
+    # Step 1 — merge Wikipedia indexes with pre-crawled marine bio indexes.
+    index_ids = EXISTING_INDEX_IDS + wiki_index_ids
+    print(f"Using {len(index_ids)} total indexes "
+          f"({len(EXISTING_INDEX_IDS)} marine bio + {len(wiki_index_ids)} Wikipedia).")
 
     # Step 2 — verify weights via HD search; prefer real data over hardcoded
     print(f"\nVerifying weights for {len(ANIMALS)} animals via HD search...")
