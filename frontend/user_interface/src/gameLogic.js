@@ -1,14 +1,16 @@
 import { rounds as fallbackRounds } from "./mock_data/rounds";
+import { geminiPickAnimal, geminiPickRound } from "./geminiSelector";
 
 const HD_BASE    = "/hd";
 const HD_FS_PATH = "/agent/sea-swipes/animals.json";
 
 const _state = {
   mode:       "hd",   // "hd" | "fallback"
-  animals:    [],     // full HD dataset
-  pool:       [],     // remaining challengers (HD) or rounds (fallback)
-  winner:     null,   // current winning animal (HD mode)
-  challenger: null,   // challenger shown in the active round (HD mode)
+  animals:    [],
+  pool:       [],
+  winner:     null,
+  challenger: null,
+  recent:     [],     // last 5 challengers for Gemini context
   scores:     [0, 0],
 };
 
@@ -41,10 +43,26 @@ function _refillPool() {
   _state.pool = _shuffled(_state.animals).filter(a => a !== _state.winner);
 }
 
+// Fire-and-forget: ask Gemini to swap pool[0] with its strategic pick.
+// Players have ~12 s (10s round + 2s reveal) before getNextRound() runs again,
+// giving Gemini ample time to respond before it matters.
+function _prefetchNextChallenger() {
+  if (_state.pool.length === 0) return;
+  const snapshot = [..._state.pool];
+  geminiPickAnimal(snapshot, _state.winner, _state.recent, _state.scores)
+    .then(idx => {
+      if (idx !== null && idx < _state.pool.length) {
+        [_state.pool[0], _state.pool[idx]] = [_state.pool[idx], _state.pool[0]];
+      }
+    })
+    .catch(console.warn);
+}
+
 export async function initQueue() {
   _state.scores     = [0, 0];
   _state.winner     = null;
   _state.challenger = null;
+  _state.recent     = [];
 
   const animals = await _fetchAnimals();
 
@@ -68,35 +86,59 @@ export async function initQueue() {
     _state.winner = b;
     _state.pool.unshift(a);
   }
+
+  // Pre-fetch Gemini's pick for the very first challenger
+  _prefetchNextChallenger();
 }
 
 export function setScores(p1, p2) {
   _state.scores = [p1, p2];
 }
 
-// Call with the round's correct value before getNextRound() to advance the winner seat.
-// In HD mode, winner is always displayed on the left.
+// Called from App.jsx after reveal, before getNextRound(), to advance the winner seat.
 export function advanceWinner(correct) {
   if (_state.mode !== "hd") return;
   if (correct === "right") _state.winner = _state.challenger;
 }
 
 export function getNextRound() {
+  // ── Fallback (mock) mode ──────────────────────────────────────────────────
   if (_state.mode === "fallback") {
-    if (_state.pool.length === 0) _state.pool = _shuffled(fallbackRounds);
+    if (_state.pool.length === 0) {
+      const pool = _shuffled(fallbackRounds);
+      geminiPickRound(pool, _state.scores)
+        .then(idx => {
+          if (idx !== null) {
+            const [picked] = pool.splice(idx, 1);
+            _state.pool = [picked, ...pool];
+          } else {
+            _state.pool = pool;
+          }
+        })
+        .catch(() => { _state.pool = _shuffled(fallbackRounds); });
+      _state.pool = _shuffled(fallbackRounds); // immediate fallback while Gemini responds
+    }
     return _state.pool.shift() ?? fallbackRounds[0];
   }
 
+  // ── HD mode ───────────────────────────────────────────────────────────────
   if (_state.pool.length === 0) _refillPool();
 
   _state.challenger = _state.pool.shift();
+
+  _state.recent.push(_state.challenger);
+  if (_state.recent.length > 5) _state.recent.shift();
+
   const w = _state.winner;
   const c = _state.challenger;
 
+  // Pre-fetch Gemini's pick for the round after this one
+  _prefetchNextChallenger();
+
   return {
-    left:    { name: w.name, stat: w.weight_kg },
-    right:   { name: c.name, stat: c.weight_kg },
-    prompt:  "Which one is heavier? (kg)",
+    left:   { name: w.name, stat: Math.round(w.weight_kg).toLocaleString(), emoji: w.emoji },
+    right:  { name: c.name, stat: Math.round(c.weight_kg).toLocaleString(), emoji: c.emoji },
+    prompt: "Which one is heavier? (kg)",
     correct: w.weight_kg >= c.weight_kg ? "left" : "right",
   };
 }
