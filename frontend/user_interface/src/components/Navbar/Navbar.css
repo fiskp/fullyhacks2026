@@ -1,0 +1,41 @@
+.navbar {
+    background: var(--ocean-dark);
+    height: 80px;
+    display: flex;
+    align-items: center;
+    justify-content: space-around;
+    padding: 0 40px; 
+    flex-shrink: 0; /* stop navbar from shrinking if content grows */
+}
+
+.logo {
+  color: var(--white);
+  font-size: 26px;
+  letter-spacing: 4px;
+}
+
+.player-badge {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 16px;
+    border-radius: 20px;
+    border: 1px solid;
+}
+
+.player-score {
+  color: #ffffff;
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.p1 {
+  background: var(--cyan-faint);
+  border-color: var(--cyan-border);
+}
+
+.p2 {
+  background: var(--red-faint);
+  border-color: var(--red-border);
+}
