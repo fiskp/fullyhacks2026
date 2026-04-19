@@ -57,6 +57,13 @@ function Home() {
           START GAME
         </button>
 
+        <button
+          className="start-btn eric-btn"
+          onClick={() => navigate("/eric-game")}
+        >
+          ERIC LY EDITION
+        </button>
+
       </div>
     </div>
   );

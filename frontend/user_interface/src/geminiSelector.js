@@ -1,5 +1,5 @@
 const GEMINI_BASE  = "https://generativelanguage.googleapis.com/v1beta";
-const GEMINI_MODEL = "gemini-2.0-flash";
+const GEMINI_MODEL = "gemini-2.5-flash";
 
 async function _callGemini(prompt) {
   const key = import.meta.env.VITE_GEMINI_API_KEY;

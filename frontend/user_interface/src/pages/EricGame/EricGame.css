@@ -1,0 +1,35 @@
+.eric-banner {
+  position: fixed;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  background: linear-gradient(90deg, #6c3fc5, #a855f7);
+  color: #fff;
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.15em;
+  padding: 3px 16px;
+  border-radius: 0 0 8px 8px;
+  z-index: 100;
+  pointer-events: none;
+}
+
+.eric-error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+  gap: 1rem;
+  color: var(--white);
+}
+
+.eric-error button {
+  padding: 0.5rem 1.5rem;
+  border-radius: 8px;
+  border: none;
+  background: #6c3fc5;
+  color: #fff;
+  cursor: pointer;
+  font-size: 1rem;
+}
