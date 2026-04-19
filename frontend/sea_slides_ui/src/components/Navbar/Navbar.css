@@ -1,0 +1,29 @@
+.navbar {
+    background: var(--ocean-dark);
+    height: 80px;
+    display: flex;
+    align-items: center;
+    justify-content: space-around;
+    padding: 0 40px; 
+    flex-shrink: 0; /* stopt navbar from shrinking if content grows */
+}
+
+.player-badge {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 16px;
+    border-radius: 20px;
+    border: 1px solid;
+}
+
+.p1 {
+  background: var(--cyan-faint);
+  border-color: var(--cyan-border);
+}
+
+.p2 {
+  background: var(--red-faint);
+  border-color: var(--red-border);
+}
