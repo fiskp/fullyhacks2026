@@ -3,8 +3,10 @@ import "./App.css";
 import Navbar from "./components/Navbar/Navbar";
 import Timer from "./components/Timer/Timer";
 import GameCards from "./components/GameCards/GameCards";
-import { rounds } from "./mock_data/rounds";
+import { initQueue, getNextRound } from "./gameLogic";
 import { useNavigate } from "react-router-dom";
+
+const TOTAL_ROUNDS = 10;
 
 function App() {
 
@@ -16,6 +18,8 @@ function App() {
   const [currentRound, setCurrentRound] = useState(0);
   const [timeLeft, setTimeLeft]         = useState(10);
   const [revealed, setRevealed]         = useState(false);
+  const [roundData, setRoundData]       = useState(null);
+  const [queueReady, setQueueReady]     = useState(false);
 
   const navigate = useNavigate();
 
@@ -27,26 +31,37 @@ function App() {
   const p1ScoreRef  = useRef(0);
   const p2ScoreRef  = useRef(0);
 
+  const roundDataRef = useRef(roundData);
+
   /* Keep refs in sync with state */
-  useEffect(() => { p1Ref.current = p1Position; },      [p1Position]);
-  useEffect(() => { p2Ref.current = p2Position; },      [p2Position]);
-  useEffect(() => { roundRef.current = currentRound; }, [currentRound]);
-  useEffect(() => { revealedRef.current = revealed; },  [revealed]);
-  useEffect(() => { p1ScoreRef.current = p1Score; },    [p1Score]);
-  useEffect(() => { p2ScoreRef.current = p2Score; },    [p2Score]);
+  useEffect(() => { p1Ref.current = p1Position; },        [p1Position]);
+  useEffect(() => { p2Ref.current = p2Position; },        [p2Position]);
+  useEffect(() => { roundRef.current = currentRound; },   [currentRound]);
+  useEffect(() => { revealedRef.current = revealed; },    [revealed]);
+  useEffect(() => { p1ScoreRef.current = p1Score; },      [p1Score]);
+  useEffect(() => { p2ScoreRef.current = p2Score; },      [p2Score]);
+  useEffect(() => { roundDataRef.current = roundData; },  [roundData]);
 
-  const round = rounds[currentRound];
+  /* Load animal queue on mount */
+  useEffect(() => {
+    initQueue()
+      .then(() => {
+        setRoundData(getNextRound());
+        setQueueReady(true);
+      })
+      .catch(err => console.error("Failed to load animals:", err));
+  }, []);
 
-  /* Start game on Enter */
+  /* Start game on Enter — only once the animal queue is ready */
   useEffect(() => {
     function handleStart(e) {
-      if (e.key === "Enter" && !gameStarted) {
+      if (e.key === "Enter" && !gameStarted && queueReady) {
         setGameStarted(true);
       }
     }
     window.addEventListener("keydown", handleStart);
     return () => window.removeEventListener("keydown", handleStart);
-  }, [gameStarted]);
+  }, [gameStarted, queueReady]);
 
   /* Arrow keys — only before reveal */
   useEffect(() => {
@@ -91,7 +106,7 @@ function App() {
           clearInterval(interval);
 
           /* Score calculation using refs */
-          const correctSide = rounds[roundRef.current].correct;
+          const correctSide = roundDataRef.current?.correct;
           const p1Correct   = p1Ref.current === correctSide;
           const p2Correct   = p2Ref.current === correctSide;
 
@@ -109,8 +124,7 @@ function App() {
           setTimeout(() => {
             const next = roundRef.current + 1;
 
-            if (next >= rounds.length) {
-              /* Game over — navigate to results with final scores */
+            if (next >= TOTAL_ROUNDS) {
               navigate("/results", {
                 state: {
                   p1Score: p1ScoreRef.current,
@@ -120,6 +134,7 @@ function App() {
               return;
             }
 
+            setRoundData(getNextRound());
             setCurrentRound(next);
             setP1Position(null);
             setP2Position(null);
@@ -136,10 +151,9 @@ function App() {
     return () => clearInterval(interval);
   }, [gameStarted, revealed, navigate]);
 
-  /* Check if position is correct — used for green/red colors */
   function isCorrect(position) {
-    if (!position) return false;
-    return position === round.correct;
+    if (!position || !roundData) return false;
+    return position === roundData.correct;
   }
 
   return (
@@ -147,7 +161,9 @@ function App() {
 
       {!gameStarted && (
         <div className="start-overlay">
-          <p className="start-sub">Press Enter to Start</p>
+          <p className="start-sub">
+            {queueReady ? "Press Enter to Start" : "Loading animals..."}
+          </p>
         </div>
       )}
 
@@ -157,13 +173,15 @@ function App() {
         timeLeft={timeLeft}
         currentRound={currentRound}
       />
-      <GameCards
-        round={round}
-        p1Position={p1Position}
-        p2Position={p2Position}
-        revealed={revealed}
-        isCorrect={isCorrect}
-      />
+      {roundData && (
+        <GameCards
+          round={roundData}
+          p1Position={p1Position}
+          p2Position={p2Position}
+          revealed={revealed}
+          isCorrect={isCorrect}
+        />
+      )}
 
     </div>
   );
