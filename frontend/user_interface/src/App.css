@@ -24,6 +24,7 @@
   color: var(--white-muted);
   letter-spacing: 3px;
   animation: pulse 1.5s ease-in-out infinite;
+  margin-top: 130px;
 }
 
 /* Pulsing animation on the press enter text */

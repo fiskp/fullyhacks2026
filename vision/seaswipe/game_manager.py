@@ -30,8 +30,8 @@ THUMBS_HOLD_FRAMES = 20
 FLASH_FRAMES = 35
 
 # ── Colors ─────────────────────────────────────────────────────────────────
-COLOR_P1    = (0,  200, 100)
-COLOR_P2    = (0,  140, 255)
+COLOR_P1    = (0,  140, 255)
+COLOR_P2    = (0,  200, 100)
 COLOR_WARN  = (0,  50,  255)
 COLOR_READY = (0,  230, 230)
 COLOR_WHITE = (255, 255, 255)

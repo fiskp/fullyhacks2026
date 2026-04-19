@@ -49,11 +49,11 @@ function VSColumn({ p1Position, p2Position, prompt, revealed }) {
 
       <div className="vs-group">
 
-        {/* Hide VS circle after reveal */}
-        {!revealed && <div className="vs-circle">VS</div>}
-
         {/* Prompt updates each round */}
         <div className="prompt-box">{prompt}</div>
+
+        {/* Hide VS circle after reveal */}
+        {!revealed && <div className="vs-circle">VS</div>}
 
         {/* Live webcam feed */}
         <video
