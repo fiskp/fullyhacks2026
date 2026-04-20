@@ -2,8 +2,8 @@ import cv2
 import math
 
 # ── Tuning constants ───────────────────────────────────────────────────────
-SPEED_THRESHOLD = 40   # px/frame  — min wrist speed to start a burst
-DIST_THRESHOLD  = 80   # px        — min net X travel to fire a swipe
+SPEED_THRESHOLD = 30   # px/frame  — min wrist speed to start a burst
+DIST_THRESHOLD  = 60   # px        — min net X travel to fire a swipe
 PEAK_SPEED_MIN  = 35   # px/frame  — peak speed needed to confirm intent
 COOLDOWN_FRAMES = 10   # frames    — lock-out after a swipe fires
 ARM_ANGLE_MAX   = 150  # degrees   — elbow→wrist angle limit
